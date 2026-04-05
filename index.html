@@ -3,8 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>タスク管理 / Task Manager ver7.8</title>
+<title>タスク管理 / Task Manager ver7.9</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -760,6 +762,22 @@ const NAME_W = 320;
 
 const LS_KEY = 'gohankojo-v8'; // ver7.2（データはv8キーを継続使用）
 
+// ═══════════════════════════════════════
+// FIREBASE 設定
+// ═══════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyDVMw6uY1e-0mxJBljYBUtYefC5QCobReo",
+  authDomain: "task-manager-2c20d.firebaseapp.com",
+  databaseURL: "https://task-manager-2c20d-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "task-manager-2c20d",
+  storageBucket: "task-manager-2c20d.firebasestorage.app",
+  messagingSenderId: "272221593353",
+  appId: "1:272221593353:web:d33b344800d96751febdd8"
+};
+firebase.initializeApp(firebaseConfig);
+const fbDb = firebase.database();
+let fbReady = false; // Firebase接続済みフラグ
+
 const COLORS = ['#3B82F6','#8B5CF6','#06B6D4','#10B981','#F59E0B','#EF4444','#EC4899','#14B8A6'];
 const CAT_COLOR = {
   '品質':'#EF4444','生産':'#10B981','設備':'#06B6D4','管理':'#8B5CF6','改善':'#F59E0B',
@@ -1198,7 +1216,11 @@ function pclass(p){return p==='urgent'?'pu':p==='high'?'ph':p==='medium'?'pm':'p
 function isOD(t_obj){const today=new Date();today.setHours(0,0,0,0);return pd(t_obj.end)<today&&t_obj.progress<100;}
 function nextId(){return tasks.length?Math.max(...tasks.map(t=>t.id))+1:1;}
 function taskColor(tags,idx){const m=(tags[0]||'').trim();return CAT_COLOR[m]||COLORS[idx%COLORS.length];}
-function save(){try{localStorage.setItem(LS_KEY,JSON.stringify(tasks));}catch(e){}}
+function save(){
+  try{localStorage.setItem(LS_KEY,JSON.stringify(tasks));}catch(e){}
+  // Firebaseにも保存（全デバイスにリアルタイム反映）
+  if(fbReady) fbDb.ref('tasks').set(tasks);
+}
 
 // 文字列類似度（バイグラムJaccard係数）
 function similarity(a, b){
@@ -3232,6 +3254,24 @@ function loginAs(role){
   document.body.appendChild(overlay);
   renderAuth();
 })();
+
+// ═══════════════════════════════════════
+// FIREBASE リアルタイム同期
+// ═══════════════════════════════════════
+fbDb.ref('tasks').on('value', (snapshot) => {
+  const data = snapshot.val();
+  if(data !== null && Array.isArray(data)){
+    // Firebaseにデータあり → 全デバイスで同期
+    tasks = data;
+    try{localStorage.setItem(LS_KEY, JSON.stringify(tasks));}catch(e){}
+    fbReady = true;
+    if(authRole) render();
+  } else {
+    // Firebase初回（データなし）→ ローカルデータをアップロード
+    fbReady = true;
+    fbDb.ref('tasks').set(tasks);
+  }
+});
 </script>
 </body>
 </html>
