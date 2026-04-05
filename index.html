@@ -1,0 +1,3237 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>タスク管理 / Task Manager ver7.8</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #F8FAFC; 
+  --surface: #FFFFFF; 
+  --border: #E2E8F0; 
+  --border-light: #F1F5F9;
+  --text: #0F172A; 
+  --text-2: #475569; 
+  --muted: #94A3B8;
+  --primary: #3B82F6; 
+  --primary-bg: #EFF6FF;
+  --urgent: #7C3AED; --urgent-bg: #EDE9FE;
+  --high: #EF4444; --high-bg: #FEF2F2;
+  --medium: #F59E0B; --medium-bg: #FFFBEB;
+  --low: #10B981; --low-bg: #F0FDF4;
+  --factory: #6366F1; --factory-bg: #EEF2FF;
+  
+  --r: 12px; 
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); 
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  
+  --row-h: 48px; --sub-h: 38px; --hdr-h: 56px; --name-w: 320px; --day-w: 36px;
+  --app-hdr: 56px; --app-stats: 48px;
+}
+
+/* ダークモード変数 */
+body.dark-mode {
+  --bg: #0F172A;
+  --surface: #1E293B;
+  --border: #334155;
+  --border-light: #1E293B;
+  --text: #F1F5F9;
+  --text-2: #94A3B8;
+  --muted: #475569;
+  --primary: #60A5FA;
+  --primary-bg: #1E3A5F;
+  --urgent: #A78BFA; --urgent-bg: #2E1065;
+  --high: #F87171; --high-bg: #2D1B1B;
+  --medium: #FCD34D; --medium-bg: #2D2510;
+  --low: #34D399; --low-bg: #0D2B22;
+  --factory: #818CF8; --factory-bg: #1E1B4B;
+  --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.3);
+  --shadow: 0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -1px rgba(0,0,0,0.2);
+  --shadow-lg: 0 20px 25px -5px rgba(0,0,0,0.5), 0 10px 10px -5px rgba(0,0,0,0.3);
+}
+body.dark-mode .g-corner,
+body.dark-mode .g-timeline-hdr { background: #1E293B; }
+body.dark-mode .g-wrap { background: #1E293B; }
+body.dark-mode .gc { background: #0F172A; }
+body.dark-mode .g-bars-cell { background: #1E293B; }
+body.dark-mode .g-name { background: #1E293B; }
+body.dark-mode .g-row.sub-row .g-name { background: #1E293B; }
+body.dark-mode .g-row:hover .g-name,
+body.dark-mode .g-row.sub-row:hover .g-name { background: #263548; }
+body.dark-mode .dcol.wknd { background: rgba(15,23,42,0.5); }
+body.dark-mode .lcard { background: var(--surface); }
+body.dark-mode .lcard-sec { background: #0F172A; }
+body.dark-mode .lcard-hdr:hover { background: #263548; }
+body.dark-mode .fi2, body.dark-mode .fsel { background: #0F172A; border-color: #334155; color: var(--text); }
+body.dark-mode .fi2:focus, body.dark-mode .fsel:focus { border-color: var(--primary); }
+body.dark-mode .modal { background: #1E293B; }
+body.dark-mode .mhdr, body.dark-mode .mftr { background: #1E293B; }
+body.dark-mode .mbody { background: #1E293B; }
+body.dark-mode .msec { background: #0F172A; border-color: #334155; }
+body.dark-mode .msec-hdr { background: #1E293B; }
+body.dark-mode .msec-body { background: #1E293B; }
+body.dark-mode .mst-item { background: #0F172A; border-color: #334155; }
+body.dark-mode .cm-item { background: #0F172A; border-color: #334155; }
+body.dark-mode .att-item { background: #0F172A; border-color: #334155; }
+body.dark-mode .att-drop-zone { background: #0F172A; border-color: #334155; }
+body.dark-mode .att-drop-zone:hover { background: var(--primary-bg); }
+body.dark-mode .att-link-input { background: #0F172A; border-color: #334155; color: var(--text); }
+body.dark-mode .drop-zone { background: #0F172A; }
+body.dark-mode .wk-card { background: var(--surface); }
+body.dark-mode .vtabs { background: #0F172A; }
+body.dark-mode .vtab.on { background: #1E293B; }
+body.dark-mode input[type=range] { background: #334155; }
+body.dark-mode .fg > div[style*="background:var(--primary-bg)"] { background: var(--primary-bg) !important; }
+
+/* ダークモードトグルボタン */
+.dark-toggle {
+  width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface); cursor: pointer; display: flex; align-items: center;
+  justify-content: center; font-size: 18px; transition: all .2s;
+  box-shadow: var(--shadow-sm); flex-shrink: 0;
+}
+.dark-toggle:hover { background: var(--bg); border-color: var(--primary); }
+html, body { height: 100%; overflow: hidden; }
+#app { display: flex; flex-direction: column; height: 100%; }
+body { 
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Kaku Gothic ProN', sans-serif; 
+  background: var(--bg); color: var(--text); font-size: 13px; display: flex; flex-direction: column; 
+  height: 100vh; overflow: hidden;
+}
+
+/* HEADER */
+.hdr { background: var(--surface); padding: 0 20px; height: var(--app-hdr); display: flex; align-items: center; gap: 16px; flex-shrink: 0; box-shadow: var(--shadow-sm); z-index: 50; border-bottom: 1px solid var(--border); }
+.logo { font-weight: 800; font-size: 17px; color: var(--text); letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.logo span { font-size: 20px; }
+.logo small { font-size: 11px; opacity: 0.6; font-weight: 600; background: var(--primary-bg); color: var(--primary); padding: 2px 6px; border-radius: 4px; margin-left: 4px;}
+.vtabs { display: flex; background: var(--border-light); border-radius: 8px; padding: 4px; gap: 2px; }
+.vtab { padding: 5px 14px; border-radius: 6px; border: none; background: transparent; font-size: 12px; font-weight: 600; color: var(--text-2); cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 6px; }
+.vtab.on { background: var(--surface); color: var(--primary); box-shadow: var(--shadow-sm); }
+.vtab:hover:not(.on) { color: var(--text); background: rgba(0,0,0,0.02); }
+.hdr-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.btn-p { background: var(--primary); color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all .2s; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.25); white-space: nowrap; }
+.btn-p:hover { background: #2563EB; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3); }
+.btn-ghost { background: var(--surface); color: var(--text-2); border: 1px solid var(--border); padding: 7px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all .2s; box-shadow: var(--shadow-sm); white-space: nowrap; }
+.btn-ghost:hover { background: var(--bg); color: var(--text); border-color: #CBD5E1; }
+
+/* 言語セレクター */
+.lang-sel { background: var(--surface); border: 1px solid var(--border); padding: 6px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text-2); transition: all .2s; box-shadow: var(--shadow-sm); outline: none; margin-right: 8px; }
+.lang-sel:hover { background: var(--bg); border-color: var(--primary); color: var(--text); }
+
+/* STATS */
+.statsbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 20px; height: var(--app-stats); display: flex; align-items: center; gap: 0; flex-shrink: 0; overflow-x: auto; }
+/* 左グループ: 数値統計 */
+.stats-left { display: flex; align-items: center; gap: 0; flex-shrink: 0; }
+/* 中央グループ: 並び替え */
+.stats-center { display: flex; align-items: center; gap: 6px; padding: 0 20px; border-left: 1px solid var(--border-light); border-right: 1px solid var(--border-light); flex-shrink: 0; }
+/* 右グループ: 進捗バー */
+.stats-right { display: flex; align-items: center; gap: 10px; padding: 0 0 0 20px; margin-left: auto; flex-shrink: 0; }
+.stat { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-2); padding: 0 16px; border-right: 1px solid var(--border-light); white-space: nowrap; font-weight: 500; }
+.stat:first-child { padding-left: 0; }
+.stat strong { font-size: 15px; font-weight: 800; color: var(--text); }
+.obar-wrap { margin-left: auto; display: flex; align-items: center; gap: 10px; padding-left: 16px; }
+.obar { width: 120px; height: 8px; background: var(--border-light); border-radius: 4px; overflow: hidden; flex-shrink: 0; }
+.obar-fill { height: 100%; border-radius: 4px; transition: width .6s cubic-bezier(0.4, 0, 0.2, 1); }
+
+/* MAIN */
+.main { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+
+/* SIDEBAR */
+.sbar { width: 190px; background: var(--surface); border-right: 1px solid var(--border); padding: 16px 12px; flex-shrink: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+.sbar-title { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; padding-left: 8px; }
+.fi { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text-2); transition: all .2s; border: none; background: transparent; width: 100%; text-align: left; }
+.fi:hover { background: var(--bg); color: var(--text); }
+.fi.on { background: var(--primary-bg); color: var(--primary); }
+.pdot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.fi-c { margin-left: auto; font-size: 10px; font-weight: 700; background: var(--border-light); color: var(--text-2); padding: 2px 6px; border-radius: 10px; }
+.fi.on .fi-c { background: rgba(59, 130, 246, 0.15); color: var(--primary); }
+
+/* CONTENT */
+.content { flex: 1; min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+
+/* GANTT */
+.gc { flex: 1; min-height: 0; overflow: scroll; background: var(--bg); display: block; }
+.gc::-webkit-scrollbar { width: 12px; height: 12px; }
+.gc::-webkit-scrollbar-track { background: var(--border-light); }
+.gc::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 6px; border: 3px solid var(--border-light); }
+.gc::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+.g-wrap { display: block; background: var(--surface); box-shadow: var(--shadow-sm); min-height: 100%; }
+.g-hdr-row { display: flex; position: sticky; top: 0; z-index: 20; border-bottom: 1px solid var(--border); box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+.g-corner { width: var(--name-w); flex-shrink: 0; position: sticky; left: 0; z-index: 22; background: #F8FAFC; border-right: 1px solid var(--border); display: flex; align-items: center; padding: 0 16px; font-size: 11px; font-weight: 700; color: var(--text-2); }
+.g-timeline-hdr { flex: 1; background: #F8FAFC; }
+.g-months-row { height: 24px; display: flex; border-bottom: 1px solid var(--border-light); }
+.g-month { height: 100%; display: flex; align-items: center; padding: 0 10px; font-size: 11px; font-weight: 700; color: var(--text-2); border-right: 1px solid var(--border-light); flex-shrink: 0; }
+.g-days-row { height: 32px; display: flex; }
+.gday { flex-shrink: 0; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--muted); border-right: 1px solid var(--border-light); font-weight: 500; }
+.gday.today-h { background: var(--primary-bg); color: var(--primary); font-weight: 700; }
+.gday.wknd-h { background: var(--bg); color: #CBD5E1; }
+
+.g-row { display: flex; border-bottom: 1px solid var(--border); transition: background .2s; }
+.g-row.done-row { background: #F0FDF4; }
+.g-row.done-row:hover { background: #DCFCE7; }
+.g-row.done-row .g-name { border-left: 4px solid #10B981; }
+body.dark-mode .g-row.done-row { background: #052e16; }
+body.dark-mode .g-row.done-row:hover { background: #14532d; }
+.lcard.done-card { border-left: 4px solid #10B981; background: #F0FDF4; }
+body.dark-mode .lcard.done-card { background: #052e16; border-left-color: #34D399; }
+.g-row.urgent-row { background: #FAF5FF; }
+.g-row.urgent-row:hover { background: #F3E8FF; }
+body.dark-mode .g-row.urgent-row { background: #2E1065; }
+body.dark-mode .g-row.urgent-row:hover { background: #3B0764; }
+.g-row.urgent-row .g-name { border-left: 4px solid #7C3AED; }
+.g-row.urgent-row .tname { font-weight: 800; color: #5B21B6; }
+body.dark-mode .g-row.urgent-row .tname { color: #C4B5FD; }
+.g-row:hover .g-name { background: var(--bg); }
+.g-row.sub-row .g-name { background: var(--surface); }
+.g-row.sub-row:hover .g-name { background: var(--bg); }
+
+.g-name { 
+  width: var(--name-w); flex-shrink: 0; position: sticky; left: 0; z-index: 8; 
+  background: var(--surface); border-right: 1px solid var(--border); 
+  display: flex; align-items: center; padding: 0 12px; gap: 8px; 
+  cursor: pointer; transition: background .2s; 
+  height: var(--row-h);
+}
+.g-row.sub-row .g-name { height: var(--sub-h); padding-left: 36px; }
+.exp-btn { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; border: none; background: var(--border-light); cursor: pointer; color: var(--text-2); font-size: 10px; flex-shrink: 0; border-radius: 4px; transition: all .2s; }
+.exp-btn:hover { background: #E2E8F0; color: var(--text); }
+.tname-wrap { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.tname { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.sub-tname { font-size: 12px; color: var(--text-2); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pbadge { font-size: 10px; padding: 3px 6px; border-radius: 6px; font-weight: 700; flex-shrink: 0; }
+.pu { background: #7C3AED; color: #fff; box-shadow: 0 0 0 2px #7C3AED40; }
+@keyframes urgentGlow {
+  0%,100% { filter: brightness(1); }
+  50% { filter: brightness(1.2); }
+}
+@keyframes urgentPulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(124,58,237,0.5), 0 2px 6px rgba(124,58,237,0.3); }
+  50% { box-shadow: 0 0 0 6px rgba(124,58,237,0), 0 2px 6px rgba(124,58,237,0.3); }
+}
+.pu { animation: urgentPulse 1.8s ease-in-out infinite; }
+.ph { background: var(--high-bg); color: var(--high); }
+.pm { background: var(--medium-bg); color: var(--medium); }
+.pl { background: var(--low-bg); color: var(--low); }
+
+.g-bars-cell { position: relative; flex-shrink: 0; background: var(--surface); display: flex; align-items: center; }
+.g-row .g-bars-cell { min-height: var(--row-h); }
+.g-row.sub-row .g-bars-cell { min-height: var(--sub-h); }
+.dcol { position: absolute; top: 0; bottom: 0; border-right: 1px solid rgba(203, 213, 225, 0.7); }
+.dcol.wknd { background: rgba(226, 232, 240, 0.55); }
+.today-vline { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--primary); opacity: 0.85; z-index: 3; pointer-events: none; }
+.gbar { position: relative; border-radius: 6px; overflow: hidden; cursor: pointer; transition: filter .2s, box-shadow .2s; box-shadow: 0 2px 6px rgba(0,0,0,0.18), 0 1px 2px rgba(0,0,0,0.12); display: flex; align-items: center; }
+.gbar:hover { filter: brightness(1.08); box-shadow: 0 4px 12px rgba(0,0,0,0.22), 0 2px 4px rgba(0,0,0,0.15); z-index: 10; }
+.gbar-fill { position: absolute; left: 0; top: 0; bottom: 0; z-index: 1; }
+.gbar-lbl { position: relative; z-index: 3; padding: 0 40px 0 8px; font-size: 11px; font-weight: 800; color: #fff; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; text-shadow: 0 1px 3px rgba(0,0,0,0.45); flex: 1; min-width: 0; }
+.gbar-pct { position: absolute; right: 6px; z-index: 3; font-size: 10px; font-weight: 800; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.45); }
+
+/* LIST */
+.lv { flex: 1; overflow-y: auto; padding: 24px; min-height: 0; background: var(--bg); }
+.lcard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 12px; overflow: hidden; box-shadow: var(--shadow-sm); transition: all .2s; }
+.lcard.urgent-card { border-left: 4px solid #7C3AED; background: #FAF5FF; }
+body.dark-mode .lcard.urgent-card { background: #2E1065; border-left-color: #A78BFA; }
+.lcard:hover { border-color: #CBD5E1; box-shadow: var(--shadow); }
+.lcard-hdr { padding: 14px 18px; display: flex; align-items: flex-start; gap: 12px; cursor: pointer; transition: background .2s; }
+.lcard-hdr:hover { background: #FAFAFA; }
+.lcard-sec { padding: 12px 18px; border-top: 1px solid var(--border-light); background: #FAFAFA; }
+.lpbar { height: 8px; background: var(--border-light); border-radius: 4px; overflow: hidden; flex: 1; }
+.lpbar-fill { height: 100%; border-radius: 4px; transition: width .4s cubic-bezier(0.4, 0, 0.2, 1); }
+.lpct { font-size: 12px; font-weight: 800; width: 36px; text-align: right; }
+.ldate { font-size: 12px; color: var(--text-2); white-space: nowrap; font-weight: 500; }
+.tag { font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 600; white-space: nowrap; }
+.tag-cat { background: var(--bg); border: 1px solid var(--border); color: var(--text-2); }
+.tag-factory { background: var(--factory-bg); color: var(--factory); border: 1px solid rgba(99, 102, 241, 0.2); }
+.tag-od { background: var(--high-bg); color: var(--high); border: 1px solid rgba(239, 68, 68, 0.2); }
+.tag-done { background: var(--low-bg); color: var(--low); border: 1px solid rgba(16, 185, 129, 0.2); }
+.sti { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px dashed var(--border-light); }
+.sti:last-child { border-bottom: none; }
+.stchk { width: 18px; height: 18px; border-radius: 5px; border: 2px solid #CBD5E1; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all .2s; font-size: 11px; color: #fff; background: var(--surface); }
+.stchk:hover { border-color: var(--primary); }
+.stchk.done { background: var(--low); border-color: var(--low); }
+.sttl { font-size: 13px; flex: 1; font-weight: 500; color: var(--text); transition: color .2s; word-break: break-all; }
+.sttl.done { text-decoration: line-through; color: var(--muted); }
+.st-pb { width: 60px; height: 6px; background: var(--border-light); border-radius: 3px; overflow: hidden; }
+.st-pbf { height: 100%; background: var(--primary); border-radius: 3px; }
+.lsec-hdr { font-size: 12px; font-weight: 800; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; padding: 12px 4px 8px; display: flex; align-items: center; gap: 10px; }
+.lsec-hdr::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* MODAL */
+.moverlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 300; opacity: 0; pointer-events: none; transition: opacity .3s ease; padding: 20px; }
+.moverlay.on { opacity: 1; pointer-events: all; }
+.modal { 
+  background: var(--surface); border-radius: 16px; width: min(560px, 96vw); 
+  max-height: 90vh; 
+  display: flex; flex-direction: column; overflow: hidden; 
+  box-shadow: var(--shadow-lg); transform: translateY(20px) scale(0.98); transition: all .3s cubic-bezier(0.4, 0, 0.2, 1); 
+}
+.moverlay.on .modal { transform: translateY(0) scale(1); }
+.modal-wide { width: 660px; }
+.mhdr { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.mtitle { font-size: 18px; font-weight: 800; color: var(--text); }
+.mclose { width: 32px; height: 32px; border-radius: 8px; border: none; background: var(--bg); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--text-2); transition: all .2s; }
+.mclose:hover { background: #E2E8F0; color: var(--high); }
+
+.mbody { padding: 20px 24px; overflow-y: auto; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 20px; } 
+.mbody > * { flex-shrink: 0; }
+
+.msec { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: #FAFAFA; }
+.msec-hdr { padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--border-light); font-size: 13px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+.msec-hdr:hover { background: #F8FAFC; }
+.msec-body { padding: 16px; display: flex; flex-direction: column; gap: 10px; background: var(--surface); }
+.fg { display: flex; flex-direction: column; gap: 6px; }
+.flbl { font-size: 12px; font-weight: 700; color: var(--text-2); }
+.fi2, .fsel { padding: 10px 14px; border: 1px solid #CBD5E1; border-radius: 8px; font-size: 14px; font-family: inherit; color: var(--text); background: var(--surface); outline: none; transition: all .2s; width: 100%; }
+input[type=date].fi2 { color-scheme: light; }
+body.dark-mode input[type=date].fi2 { color-scheme: dark; }
+body.dark-mode input[type=date] { color-scheme: dark; color: var(--text); }
+.fi2:focus, .fsel:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); }
+.frow { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.psld-wrap { display: flex; align-items: center; gap: 12px; }
+input[type=range] { flex: 1; accent-color: var(--primary); }
+input[type=range]:disabled { opacity: 0.5; cursor: not-allowed; }
+.pval { font-size: 16px; font-weight: 800; color: var(--primary); width: 44px; text-align: right; }
+.mftr { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; flex-shrink: 0; background: var(--surface); }
+.btn-s { padding: 8px 16px; border: 1px solid #CBD5E1; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; background: var(--surface); color: var(--text-2); font-family: inherit; transition: all .2s; }
+.btn-s:hover { background: var(--bg); color: var(--text); }
+.btn-blue { padding: 8px 20px; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; background: var(--primary); color: #fff; font-family: inherit; transition: all .2s; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2); }
+.btn-blue:hover { background: #2563EB; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3); }
+.btn-del { padding: 8px 16px; border: 1px solid var(--high-bg); border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; background: var(--high-bg); color: var(--high); font-family: inherit; margin-right: auto; transition: all .2s; }
+.btn-del:hover { background: #FEE2E2; }
+.add-row { display: flex; gap: 8px; }
+.add-row .fi2 { flex: 1; }
+.mst-item { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--border-light); border-radius: 8px; background: var(--surface); margin-bottom: 4px;}
+.radio-group { display: flex; gap: 16px; padding: 8px 0; }
+.radio-group label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer; }
+.radio-group input[type="radio"] { accent-color: var(--primary); width: 16px; height: 16px; cursor: pointer; }
+
+/* MISC */
+.drop-zone { border: 2px dashed #CBD5E1; border-radius: 12px; padding: 32px; text-align: center; cursor: pointer; transition: all .2s; color: var(--text-2); background: var(--bg); }
+.drop-zone:hover, .drop-zone.drag { border-color: var(--primary); background: var(--primary-bg); color: var(--primary); }
+.empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 200px; gap: 12px; color: var(--muted); }
+.empty-icon { font-size: 40px; opacity: 0.5; }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ATTACHMENTS */
+.att-section { }
+.att-drop-zone {
+  border: 2px dashed #CBD5E1; border-radius: 10px; padding: 20px;
+  text-align: center; cursor: pointer; transition: all .2s;
+  background: var(--bg); color: var(--text-2); font-size: 12px;
+  position: relative;
+}
+.att-drop-zone:hover, .att-drop-zone.drag-over {
+  border-color: var(--primary); background: var(--primary-bg); color: var(--primary);
+}
+.att-drop-zone input[type=file] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.att-drop-icon { font-size: 28px; margin-bottom: 6px; }
+.att-drop-text { font-weight: 700; font-size: 13px; margin-bottom: 2px; }
+.att-drop-sub { font-size: 11px; opacity: .7; }
+
+.att-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.att-item {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg); border: 1px solid var(--border-light);
+  border-radius: 8px; padding: 8px 10px; font-size: 12px;
+}
+.att-thumb {
+  width: 48px; height: 48px; border-radius: 6px; object-fit: cover;
+  flex-shrink: 0; cursor: pointer; border: 1px solid var(--border);
+  transition: transform .2s;
+}
+.att-thumb:hover { transform: scale(1.05); }
+.att-file-icon {
+  width: 48px; height: 48px; border-radius: 6px; background: var(--border-light);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; flex-shrink: 0; cursor: pointer;
+  border: 1px solid var(--border);
+}
+.att-info { flex: 1; min-width: 0; }
+.att-name {
+  font-weight: 700; color: var(--text); overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; margin-bottom: 3px;
+}
+.att-meta { font-size: 10px; color: var(--muted); }
+.att-open {
+  background: var(--primary-bg); color: var(--primary); border: 1px solid rgba(59,130,246,.2);
+  border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 700;
+  cursor: pointer; white-space: nowrap; flex-shrink: 0; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.att-open:hover { background: var(--primary); color: #fff; }
+.att-del {
+  background: none; border: none; cursor: pointer; color: var(--muted);
+  font-size: 14px; padding: 2px 4px; flex-shrink: 0;
+}
+.att-del:hover { color: var(--high); }
+
+/* リンク追加エリア */
+.att-link-row { display: flex; gap: 6px; margin-top: 8px; }
+.att-link-input { flex: 1; padding: 8px 12px; border: 1px solid #CBD5E1; border-radius: 8px; font-size: 12px; font-family: inherit; color: var(--text); background: var(--surface); outline: none; }
+.att-link-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
+.att-link-btn { padding: 8px 14px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.att-link-btn:hover { background: #2563EB; }
+
+/* 画像ライトボックス */
+.lightbox-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 9998;
+  display: flex; align-items: center; justify-content: center;
+  animation: fadeIn .2s ease;
+}
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+.lightbox-img { max-width: 90vw; max-height: 85vh; border-radius: 8px; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+.lightbox-close {
+  position: fixed; top: 20px; right: 24px; color: #fff; font-size: 32px;
+  cursor: pointer; background: rgba(0,0,0,.4); border: none;
+  border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+}
+.lightbox-close:hover { background: rgba(255,255,255,.2); }
+.att-size-warn { font-size: 11px; color: #F59E0B; margin-top: 4px; }
+
+/* AUTH SCREEN */
+.auth-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: linear-gradient(135deg, #0F172A 0%, #1E3A5F 50%, #0F172A 100%);
+  display: flex; align-items: center; justify-content: center;
+}
+.auth-box {
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 24px;
+  padding: 48px 40px;
+  width: 420px;
+  text-align: center;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.5);
+}
+.auth-logo { font-size: 48px; margin-bottom: 16px; }
+.auth-title { font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 6px; letter-spacing: -0.5px; }
+.auth-sub { font-size: 13px; color: rgba(255,255,255,0.5); margin-bottom: 36px; }
+.auth-role-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+.auth-role-btn {
+  padding: 20px 16px; border-radius: 16px; border: 2px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05); cursor: pointer; transition: all .25s;
+  color: #fff; font-family: inherit;
+}
+.auth-role-btn:hover { border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.1); transform: translateY(-2px); }
+.auth-role-btn.selected { border-color: #3B82F6; background: rgba(59,130,246,0.2); }
+.auth-role-icon { font-size: 28px; margin-bottom: 8px; }
+.auth-role-label { font-size: 14px; font-weight: 700; }
+.auth-role-desc { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 4px; }
+.auth-pw-area { margin-bottom: 20px; text-align: left; }
+.auth-pw-label { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.6); margin-bottom: 8px; }
+.auth-pw-input {
+  width: 100%; padding: 12px 16px; border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08);
+  color: #fff; font-size: 20px; font-family: inherit; letter-spacing: 8px;
+  outline: none; text-align: center; transition: border-color .2s;
+  box-sizing: border-box;
+}
+.auth-pw-input::placeholder { letter-spacing: 2px; font-size: 13px; color: rgba(255,255,255,0.3); }
+.auth-pw-input:focus { border-color: #3B82F6; }
+.auth-pw-error { font-size: 12px; color: #EF4444; margin-top: 6px; min-height: 18px; }
+.auth-submit {
+  width: 100%; padding: 14px; border-radius: 12px; border: none;
+  background: linear-gradient(135deg, #3B82F6, #6366F1);
+  color: #fff; font-size: 15px; font-weight: 700; cursor: pointer;
+  font-family: inherit; transition: all .2s;
+  box-shadow: 0 4px 16px rgba(59,130,246,0.4);
+}
+.auth-submit:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(59,130,246,0.5); }
+.auth-submit:active { transform: translateY(0); }
+.auth-lang { display: flex; gap: 8px; justify-content: center; margin-bottom: 28px; }
+.auth-lang-btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); padding: 4px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; font-family: inherit; transition: all .2s; }
+.auth-lang-btn:hover, .auth-lang-btn.on { background: rgba(255,255,255,0.2); color: #fff; border-color: rgba(255,255,255,0.4); }
+/* 閲覧モード：編集系ボタンのみ非表示・無効化（表示・バー・文字は通常通り） */
+body.viewer-mode .btn-p { display: none !important; }
+body.viewer-mode .btn-ghost:not(.export-btn) { display: none !important; }
+/* サブタスクチェックボックスは操作不可（見た目はそのまま） */
+body.viewer-mode .stchk { pointer-events: none !important; }
+body.viewer-mode .stchk.done { pointer-events: none !important; }
+/* リセットボタンのみ非表示 */
+body.viewer-mode [onclick*="resetData"] { display: none !important; }
+.viewer-badge { background: #F59E0B; color: #fff; font-size: 11px; font-weight: 800; padding: 3px 10px; border-radius: 20px; margin-left: 8px; }
+
+/* SORT & DRAG *//* SORT & DRAG */
+.sort-btn { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text-2); cursor: pointer; transition: all .15s; }
+.sort-btn:hover { background: var(--bg); color: var(--text); border-color: #94A3B8; }
+.sort-btn.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+.g-row.dragging { opacity: .4; }
+.g-row.drag-over { border-top: 3px solid var(--primary); }
+.lcard.dragging { opacity: .4; }
+.lcard.drag-over { border-top: 3px solid var(--primary); }
+.drag-handle { cursor: grab; color: var(--muted); font-size: 14px; padding: 0 4px; flex-shrink: 0; user-select: none; }
+.drag-handle:hover { color: var(--text-2); }
+.drag-handle:active { cursor: grabbing; }
+.collapse-all-btn { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 5px; border: 1px solid var(--border); background: var(--surface); color: var(--text-2); cursor: pointer; transition: all .15s; white-space: nowrap; }
+.collapse-all-btn:hover { background: var(--primary-bg); color: var(--primary); border-color: var(--primary); }
+
+
+/* ASSIGNEE FILTER */
+.ass-filter { display: flex; align-items: center; gap: 6px; padding: 8px 20px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; overflow-x: auto; min-height: 44px; }
+.ass-chip { font-size: 11px; font-weight: 600; padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--text-2); cursor: pointer; white-space: nowrap; transition: all .2s; }
+.ass-chip.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+.ass-chip:hover:not(.on) { background: var(--bg); border-color: #94A3B8; }
+
+/* WEEKLY SUMMARY */
+.wk-view { flex: 1; min-height: 0; overflow-y: auto; padding: 24px; background: var(--bg); }
+.wk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 16px; }
+.wk-card { background: var(--surface); border-radius: var(--r); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow-sm); }
+.wk-card-hdr { padding: 14px 18px; font-size: 13px; font-weight: 800; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border-light); }
+.wk-card-body { padding: 12px 18px; }
+.wk-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border-light); font-size: 12px; cursor: pointer; transition: background .15s; }
+.wk-item:last-child { border-bottom: none; }
+.wk-item:hover { color: var(--primary); }
+.wk-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.wk-name { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wk-date { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.wk-empty { font-size: 12px; color: var(--muted); padding: 16px 0; text-align: center; }
+
+/* COMMENTS */
+.cm-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.cm-item { background: var(--bg); border-radius: 8px; padding: 10px 12px; font-size: 12px; position: relative; border: 1px solid var(--border-light); }
+.cm-text { color: var(--text); line-height: 1.5; word-break: break-all; }
+.cm-meta { font-size: 10px; color: var(--muted); margin-top: 4px; display: flex; align-items: center; gap: 8px; }
+.cm-del { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 12px; margin-left: auto; padding: 0 2px; }
+.cm-del:hover { color: var(--high); }
+
+/* PRINT */
+
+/* ═══════════════════════════════════════
+   MOBILE RESPONSIVE ( ≤ 768px )  ver7.4
+   ═══════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* ── 変数調整 ── */
+  :root {
+    --app-hdr: 52px;
+    --app-stats: auto;
+    --name-w: 200px;
+    --day-w: 28px;
+  }
+
+  /* ── ヘッダー: シンプル化 ② ── */
+  .hdr { padding: 0 10px; gap: 6px; height: var(--app-hdr); flex-wrap: nowrap; }
+  .logo { font-size: 13px; flex-shrink: 0; }
+  .logo small { display: none; }
+  .vtabs { display: none; }
+  /* 言語ボタンをヘッダーから隠す → サイドバーへ ② */
+  .hdr-lang { display: none !important; }
+  /* インポート・エクスポート・印刷ボタン非表示 */
+  .hdr-right .btn-ghost { display: none !important; }
+  .hdr-right { gap: 4px; }
+  /* 新規タスクボタンをコンパクトに */
+  .hdr-right .btn-p { font-size: 12px; padding: 6px 10px; }
+
+  /* ハンバーガーメニューボタン */
+  .mob-menu-btn {
+    display: flex !important;
+    width: 36px; height: 36px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface);
+    align-items: center; justify-content: center;
+    font-size: 16px; cursor: pointer; flex-shrink: 0;
+  }
+
+  /* ── statsbar 折りたたみ ③ ── */
+  .statsbar {
+    height: auto !important;
+    padding: 6px 12px;
+    gap: 0;
+    flex-wrap: wrap;
+    cursor: pointer;
+    overflow: hidden;
+  }
+  .statsbar-inner { display: flex; flex-wrap: wrap; gap: 4px 0; width: 100%; }
+  .statsbar.collapsed .statsbar-inner { display: none; }
+  .statsbar.collapsed { padding: 6px 12px; }
+  .statsbar-mini { display: none; align-items: center; gap: 10px; flex: 1; }
+  .statsbar.collapsed .statsbar-mini { display: flex; }
+  .statsbar-toggle {
+    width: 28px; height: 28px; border: none; background: transparent;
+    color: var(--text-2); cursor: pointer; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-left: auto;
+    border-radius: 4px; transition: background .15s;
+  }
+  .statsbar-toggle:hover { background: var(--border); }
+  .stat { flex-shrink: 0; padding: 4px 12px; }
+  .stat.obar-wrap { width: 100%; margin-top: 0; padding: 4px 0; }
+  /* PC専用グループはモバイルで非表示 */
+  .stats-left, .stats-center, .stats-right { display: none !important; }
+
+  /* ── 担当者フィルター ── */
+  .ass-filter { padding: 5px 10px; min-height: 38px; }
+  .ass-chip { font-size: 11px; padding: 3px 8px; min-height: 30px; }
+
+  /* ── サイドバー ── */
+  .sbar {
+    position: fixed !important;
+    top: 0; left: -280px; bottom: 0;
+    width: 260px !important;
+    z-index: 200;
+    transition: left .25s ease;
+    box-shadow: none;
+    padding-top: 56px;
+    display: flex; flex-direction: column;
+  }
+  .sbar.open { left: 0; box-shadow: 4px 0 24px rgba(0,0,0,0.2); }
+  .sbar-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 199;
+    background: rgba(0,0,0,0.4);
+  }
+  .sbar-overlay.open { display: block; }
+
+  /* ── メインコンテンツ ── */
+  .main { overflow: visible; }
+  .content { overflow: auto; padding-bottom: 64px; }
+
+  /* ── リストビュー: タップ領域拡大 ① ── */
+  .lcard { border-radius: 12px; cursor: pointer; }
+  .lcard:active { opacity: .85; transform: scale(0.99); }
+  .lcard-hdr { padding: 14px 12px; gap: 8px; }
+  /* モバイル編集ボタン: カード下部に大きく */
+  .lcard-mob-edit {
+    display: flex;
+    border-top: 1px solid var(--border-light);
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .lcard-mob-edit-btn {
+    flex: 1; padding: 9px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--bg); color: var(--text); font-size: 13px; font-weight: 700;
+    cursor: pointer; text-align: center; font-family: inherit;
+  }
+  .lcard-mob-edit-btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .lcard-mob-edit-btn:active { opacity: .8; }
+
+  /* ── ガントチャート ── */
+  .g-name { min-width: var(--name-w); }
+
+  /* ── モーダル: ボトムシート ⑤ ── */
+  .moverlay { align-items: flex-end; }
+  .modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 20px 20px 0 0;
+    max-height: 96vh;
+    margin: 0;
+  }
+  /* キーボード表示時は高さを縮める */
+  .modal.kb-shrink {
+    max-height: 60vh;
+  }
+  .mbody {
+    max-height: calc(96vh - 116px);
+    -webkit-overflow-scrolling: touch;
+  }
+  .mbody.kb-shrink { max-height: 40vh; }
+  /* モーダル入力フォームのフォントサイズ（iOS zoom防止: 16px以上） */
+  .fi2, .fsel, textarea { font-size: 16px !important; }
+
+  /* ── ボトムナビ（4タブ） ④ ── */
+  .mob-nav {
+    display: flex !important;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    z-index: 100;
+    padding: 0 0 env(safe-area-inset-bottom, 0);
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+  }
+  .mob-nav-btn {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 2px; padding: 6px 2px 8px;
+    border: none; background: transparent;
+    color: var(--text-2); cursor: pointer;
+    font-family: inherit; font-size: 10px; font-weight: 600;
+    min-height: 52px; transition: color .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mob-nav-btn.on { color: var(--primary); }
+  .mob-nav-btn.on .mob-icon { transform: scale(1.1); }
+  .mob-nav-btn .mob-icon { font-size: 22px; transition: transform .15s; }
+
+  /* ── コンテンツ下部のボトムナビ分の余白 ── */
+  .lv { padding-bottom: 72px !important; }
+
+  /* ── フィルターボタン（サイドバー表示用） ── */
+  .mob-filter-btn {
+    display: flex !important;
+    align-items: center; gap: 4px;
+    font-size: 12px; font-weight: 700;
+    padding: 5px 10px; border-radius: 6px; min-height: 34px;
+    border: 1px solid var(--border);
+    background: var(--surface); color: var(--text-2);
+    cursor: pointer; flex-shrink: 0;
+  }
+
+  /* ── アラートバナー: 縦並び ── */
+
+
+  /* ── ダッシュボード ── */
+  .db-view { padding: 12px; }
+  .db-cards { gap: 8px; }
+  .db-card { padding: 12px 14px; min-width: 80px; }
+  .db-card-num { font-size: 24px; }
+  .db-label { width: 80px; font-size: 11px; }
+}
+
+/* PC時は非表示にしておく */
+.mob-menu-btn { display: none; }
+.mob-nav { display: none; }
+.mob-filter-btn { display: none; }
+.sbar-overlay { display: none; }
+
+@media print {
+  .hdr, .statsbar, .sbar, .ass-filter, .moverlay { display: none !important; }
+  body, html { height: auto !important; overflow: visible !important; }
+  .main { height: auto !important; overflow: visible !important; }
+  .content { overflow: visible !important; }
+  .gc { overflow: visible !important; height: auto !important; }
+  .g-wrap { box-shadow: none !important; }
+  .g-hdr-row { position: relative !important; }
+  .g-name { position: relative !important; }
+  @page { size: A3 landscape; margin: 10mm; }
+}
+
+/* ══════════════════════════════════════
+   ダッシュボードビュー
+══════════════════════════════════════ */
+.db-view { padding: 24px; overflow-y: auto; height: 100%; }
+.db-cards { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+.db-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 16px 20px; min-width: 120px; flex: 1; box-shadow: var(--shadow); }
+.db-card-num { font-size: 32px; font-weight: 800; color: var(--text); line-height: 1.1; }
+.db-card-lbl { font-size: 11px; font-weight: 600; color: var(--text-2); margin-top: 4px; }
+.db-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.db-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 20px; box-shadow: var(--shadow); }
+.db-panel-title { font-size: 13px; font-weight: 800; color: var(--text); margin-bottom: 16px; padding-bottom: 10px; border-bottom: 2px solid var(--border); }
+.db-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.db-label { font-size: 12px; font-weight: 700; color: var(--text); width: 100px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.db-bar-wrap { flex: 1; height: 10px; background: var(--border); border-radius: 5px; overflow: hidden; }
+.db-bar { height: 100%; border-radius: 5px; transition: width .6s ease; }
+.db-pct { font-size: 12px; font-weight: 700; color: var(--text); width: 40px; text-align: right; flex-shrink: 0; }
+.db-sub { font-size: 11px; color: var(--muted); width: 50px; text-align: right; flex-shrink: 0; }
+.db-assignee-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; }
+@media (max-width: 768px) {
+  .db-panels { grid-template-columns: 1fr; }
+  .db-assignee-grid { grid-template-columns: 1fr; }
+  .db-panel[style*="span 2"] { grid-column: span 1 !important; }
+}
+
+/* ══════════════════════════════════════
+   一括操作
+══════════════════════════════════════ */
+.bulk-toolbar { background: var(--primary-bg); border-bottom: 2px solid var(--primary); padding: 8px 16px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; flex-wrap: wrap; }
+.bulk-count { font-size: 13px; font-weight: 800; color: var(--primary); }
+.bulk-btn { padding: 5px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 12px; font-weight: 700; cursor: pointer; transition: all .15s; }
+.bulk-btn:hover { background: var(--bg); border-color: var(--primary); color: var(--primary); }
+.bulk-btn.danger:hover { border-color: var(--high); color: var(--high); background: var(--high-bg); }
+.bulk-btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+.bulk-btn.primary:hover { opacity: .85; }
+.bulk-sep { width: 1px; height: 20px; background: var(--border); }
+.lcard-chk { width: 20px; height: 20px; border: 2px solid var(--border); border-radius: 5px; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .15s; margin-right: 4px; }
+.lcard-chk.checked { background: var(--primary); border-color: var(--primary); color: #fff; font-size: 12px; font-weight: 800; }
+.lcard-chk:hover { border-color: var(--primary); }
+.lcard.selected { outline: 2px solid var(--primary); outline-offset: -2px; background: var(--primary-bg); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ═══════════════════════════════════════
+// CONSTANTS & DICTIONARY (i18n)
+// ═══════════════════════════════════════
+const DAY_W = 36;
+const GANTT_START = new Date('2026-03-01T00:00:00');
+const TOTAL_DAYS = 40;
+const NAME_W = 320; 
+
+const LS_KEY = 'gohankojo-v8'; // ver7.2（データはv8キーを継続使用）
+
+const COLORS = ['#3B82F6','#8B5CF6','#06B6D4','#10B981','#F59E0B','#EF4444','#EC4899','#14B8A6'];
+const CAT_COLOR = {
+  '品質':'#EF4444','生産':'#10B981','設備':'#06B6D4','管理':'#8B5CF6','改善':'#F59E0B',
+  'Quality':'#EF4444','Production':'#10B981','Equipment':'#06B6D4','Management':'#8B5CF6','Improvement':'#F59E0B',
+  'Качество':'#EF4444','Производство':'#10B981','Оборудование':'#06B6D4','Управление':'#8B5CF6','Улучшение':'#F59E0B'
+};
+
+const DIC = {
+  ja: {
+    app_title: "合板/単板工場", app_sub: "タスク管理 v7.7",
+    t_gantt: "📊 ガントチャート", t_list: "📋 リストビュー",
+    imp: "📥 インポート", exp: "📤 エクスポート", new: "＋ 新規タスク作成",
+    s_tot: "表示タスク数", s_done: "完了", s_act: "対応中", s_od: "期限超過", s_prog: "表示中タスク進捗",
+    f_lbl: "工場", f_all: "すべて", f_ply: "合板工場", f_ven: "単板工場",
+    st_lbl: "状態", st_act: "🔄 未完了", st_done: "✅ 完了",
+    p_lbl: "優先度", p_u: "最優先", p_h: "高い", p_m: "中", p_l: "低い",
+    tag_lbl: "分類タグ", rst: "↩ サンプルに戻す",
+    gc_det: "📋 タスク詳細", gc_od: "遅延", gc_emp: "該当タスクがありません",
+    lv_act: "🔄 対応中・未完了", lv_done: "✅ 完了済み",
+    m_edit: "📝 タスクを編集", m_new: "✨ 新規タスク作成",
+    l_name: "タスク名", ph_name: "タスク名を入力...", l_fac: "対象工場",
+    l_pri: "優先度", mh_u: "🚨 最優先", mh_h: "🔴 高い", mh_m: "🟡 中", mh_l: "🟢 低い",
+    l_ass: "担当者", ph_ass: "担当者名", l_st: "開始日", l_ed: "終了日",
+    l_tag: "分類タグ（カンマ区切り）", ph_tag: "品質, 設備, 管理...",
+    l_prg: "進捗率", l_auto: "(※サブタスクから自動計算)",
+    l_sub: "📌 サブタスク追加", e_sub: "サブタスクはまだありません",
+    ph_sub: "サブタスクを入力して追加...", btn_add: "＋ 複数追加", hint_sub: "※追加ボタンを押せば何個でも追加できます",
+    btn_del: "🗑 削除", btn_can: "キャンセル", btn_sav: "✓ 変更を保存する", btn_cre: "＋ タスクを作成する",
+    al_nam: "タスク名を入力してください", al_dat: "終了日は開始日以降にしてください", al_del: "本当に削除してよろしいですか？", al_rst: "サンプルデータに戻しますか？",
+    i_tit: "📥 タスクをインポート", i_fc: "📁 Excel / CSV", i_tx: "📝 テキスト貼り付け",
+    i_drp: "ファイルをドロップ or クリックして選択", i_sup: "Excel (.xlsx, .xls) / CSV に対応しています",
+    i_lbl: "テキストを貼り付け（1行＝1タスク）", i_ph: "形式: タスク名,担当者,開始日(YYYY-MM-DD),終了日(YYYY-MM-DD),優先度(高/中/低),分類\\n例: 品質チェック,山田太郎,2026-04-01,2026-04-10,高,品質",
+    i_prv: "プレビュー（親タスク {0}件 / 計 {1}件）", b_clr: "クリア", b_add: "✓ {0}件を追加する",
+    e_tit: "📤 エクスポート", e_dsc: "現在表示中の {0}件 のタスクを出力します。",
+    e_csv: "CSV形式", e_c_sub: "汎用的なカンマ区切りデータ", e_xls: "Excel形式", e_x_sub: "エクセルで直接編集可能", b_cls: "閉じる",
+    msg_imp: "{0}件のタスクを追加しました！", unass: "未設定",
+    t_week: "📅 週次サマリー", v_assignee: "👤 担当者", v_all: "全員",
+    al_warn: "⚠️ 期限アラート", al_soon: "3日以内に期限", al_today: "本日期限", al_none: "期限間近のタスクなし",
+    wk_title: "📅 週次サマリー", wk_due: "今週期限のタスク", wk_comp: "今週完了予定", wk_od: "期限超過中", wk_none: "該当タスクなし",
+    cm_title: "💬 コメント・メモ", cm_ph: "申し送り・経緯メモを入力...", cm_add: "追加", cm_none: "メモなし",
+    pr_title: "🖨️ 印刷・PDF出力", pr_btn: "印刷する",
+    sort_lbl:"🔀 並替",
+    t_trans:"🌐 翻訳管理", trans_title:"ロシア語タイトル一括入力", trans_sub:"タイトルをロシア語に入力してください",
+    trans_ja:"日本語", trans_ru:"ロシア語（入力）", trans_save:"✓ 全て保存", trans_done:"入力済み", trans_empty:"未入力", sort_date:"📅 日付", sort_pri:"🚨 優先度", sort_prog:"📊 進捗", sort_reset:"↩ 手動順",
+    exp_all:"▼ 全て閉じる", col_all:"▶ 全て開く",
+    att_title: "📎 添付ファイル・リンク", att_drop: "画像をドロップ or クリックして追加", att_drop_sub: "JPG / PNG / GIF（1枚5MB以内）",
+    att_link_ph: "https:// リンクURLを入力...", att_link_add: "追加", att_none: "添付なし",
+    att_open: "開く", att_size_err: "ファイルが大きすぎます（5MB以内）", att_link_err: "URLを入力してください",
+    trans_exp: "📤 CSVエクスポート", trans_imp: "📥 CSVインポート", trans_imp_ok: "翻訳CSVをインポートしました",
+    t_dash: "📈 ダッシュボード",
+    dash_summary: "全体サマリー", dash_factory: "工場別進捗", dash_priority: "優先度分布", dash_assignee: "担当者別タスク数", dash_completion: "完了率",
+    bulk_mode: "☑ 一括選択", bulk_done: "✅ 完了にする", bulk_active: "🔄 未完了に戻す", bulk_delete: "🗑 削除", bulk_count: "件選択中", bulk_all: "全選択", bulk_clear: "解除",
+    imp_auto_done: "✅ {0}件を追加しました（重複 {1}件はスキップ）",
+    imp_auto_none: "新しいタスクはありませんでした（全件重複）",
+    imp_dup_badge: "重複のためスキップ"
+  },
+  en: {
+    app_title: "Plywood/Veneer", app_sub: "Task Manager v7.7",
+    t_gantt: "📊 Gantt Chart", t_list: "📋 List View",
+    imp: "📥 Import", exp: "📤 Export", new: "＋ New Task",
+    s_tot: "Total Tasks", s_done: "Done", s_act: "Active", s_od: "Overdue", s_prog: "Overall Progress",
+    f_lbl: "Factory", f_all: "All", f_ply: "Plywood", f_ven: "Veneer",
+    st_lbl: "Status", st_act: "🔄 Active", st_done: "✅ Done",
+    p_lbl: "Priority", p_u: "Urgent", p_h: "High", p_m: "Medium", p_l: "Low",
+    tag_lbl: "Tags", rst: "↩ Reset to Sample",
+    gc_det: "📋 Task Details", gc_od: "Overdue", gc_emp: "No tasks found",
+    lv_act: "🔄 Active / Pending", lv_done: "✅ Completed",
+    m_edit: "📝 Edit Task", m_new: "✨ Create Task",
+    l_name: "Task Name", ph_name: "Enter task name...", l_fac: "Factory",
+    l_pri: "Priority", mh_u: "🚨 Urgent", mh_h: "🔴 High", mh_m: "🟡 Medium", mh_l: "🟢 Low",
+    l_ass: "Assignee", ph_ass: "Assignee name", l_st: "Start Date", l_ed: "End Date",
+    l_tag: "Tags (comma separated)", ph_tag: "Quality, Equipment...",
+    l_prg: "Progress", l_auto: "(Auto-calculated)",
+    l_sub: "📌 Subtasks", e_sub: "No subtasks yet",
+    ph_sub: "Enter subtask...", btn_add: "＋ Add", hint_sub: "* You can add as many as you need",
+    btn_del: "🗑 Delete", btn_can: "Cancel", btn_sav: "✓ Save Changes", btn_cre: "＋ Create Task",
+    al_nam: "Please enter a task name.", al_dat: "End date must be after start date.", al_del: "Are you sure you want to delete?", al_rst: "Reset to sample data?",
+    i_tit: "📥 Import Tasks", i_fc: "📁 Excel / CSV", i_tx: "📝 Paste Text",
+    i_drp: "Drop files here or click to select", i_sup: "Supports Excel (.xlsx, .xls) / CSV",
+    i_lbl: "Paste text (1 task per line)", i_ph: "Format: Task Name, Assignee, Start, End, Priority, Tag\\nEx: Quality Check, John Doe, 2026-04-01, 2026-04-10, High, Quality",
+    i_prv: "Preview (Parent {0} / Total {1})", b_clr: "Clear", b_add: "✓ Add {0} tasks",
+    e_tit: "📤 Export Tasks", e_dsc: "Exporting {0} currently displayed tasks.",
+    e_csv: "CSV Format", e_c_sub: "Standard comma-separated data", e_xls: "Excel Format", e_x_sub: "Directly editable in Excel", b_cls: "Close",
+    msg_imp: "Added {0} tasks!", unass: "Unassigned",
+    t_week: "📅 Weekly Summary", v_assignee: "👤 Assignee", v_all: "All",
+    al_warn: "⚠️ Deadline Alert", al_soon: "Due within 3 days", al_today: "Due today", al_none: "No upcoming deadlines",
+    wk_title: "📅 Weekly Summary", wk_due: "Due this week", wk_comp: "Completing this week", wk_od: "Overdue", wk_none: "No tasks found",
+    cm_title: "💬 Comments & Notes", cm_ph: "Enter notes or handover info...", cm_add: "Add", cm_none: "No notes",
+    pr_title: "🖨️ Print / PDF", pr_btn: "Print",
+    att_title: "📎 Attachments & Links", att_drop: "Drop image or click to add", att_drop_sub: "JPG / PNG / GIF (max 5MB each)",
+    att_link_ph: "https:// Enter link URL...", att_link_add: "Add", att_none: "No attachments",
+    att_open: "Open", att_size_err: "File too large (max 5MB)", att_link_err: "Please enter a URL"
+  },
+  ru: {
+    app_title: "Фанера/Шпон", app_sub: "Задачи v7.7",
+    t_gantt: "📊 Д. Ганта", t_list: "📋 Список",
+    imp: "📥 Импорт", exp: "📤 Экспорт", new: "＋ Новая задача",
+    s_tot: "Всего задач", s_done: "Завершено", s_act: "В работе", s_od: "Просрочено", s_prog: "Общий прогресс",
+    f_lbl: "Завод", f_all: "Все", f_ply: "Фанерный", f_ven: "Шпоновый",
+    st_lbl: "Статус", st_act: "🔄 В работе", st_done: "✅ Готово",
+    p_lbl: "Приоритет", p_u: "Срочно", p_h: "Высокий", p_m: "Средний", p_l: "Низкий",
+    tag_lbl: "Теги", rst: "↩ Сбросить данные",
+    gc_det: "📋 Детали задачи", gc_od: "Просрочка", gc_emp: "Задачи не найдены",
+    lv_act: "🔄 В работе / Ожидание", lv_done: "✅ Завершено",
+    m_edit: "📝 Редактировать", m_new: "✨ Создать задачу",
+    l_name: "Название", ph_name: "Введите название...", l_fac: "Завод",
+    l_pri: "Приоритет", mh_u: "🚨 Срочно", mh_h: "🔴 Высокий", mh_m: "🟡 Средний", mh_l: "🟢 Низкий",
+    l_ass: "Исполнитель", ph_ass: "Имя исполнителя", l_st: "Начало", l_ed: "Конец",
+    l_tag: "Теги (через запятую)", ph_tag: "Качество, Оборудование...",
+    l_prg: "Прогресс", l_auto: "(Авторасчет)",
+    l_sub: "📌 Подзадачи", e_sub: "Нет подзадач",
+    ph_sub: "Введите подзадачу...", btn_add: "＋ Добавить", hint_sub: "* Можно добавить несколько",
+    btn_del: "🗑 Удалить", btn_can: "Отмена", btn_sav: "✓ Сохранить", btn_cre: "＋ Создать задачу",
+    al_nam: "Введите название задачи.", al_dat: "Дата окончания должна быть после даты начала.", al_del: "Удалить эту задачу?", al_rst: "Сбросить до тестовых данных?",
+    i_tit: "📥 Импорт задач", i_fc: "📁 Excel / CSV", i_tx: "📝 Вставить текст",
+    i_drp: "Перетащите файлы сюда или нажмите", i_sup: "Поддерживает Excel (.xlsx, .xls) / CSV",
+    i_lbl: "Вставьте текст (1 строка = 1 задача)", i_ph: "Формат: Название, Исполнитель, Начало, Конец, Приоритет, Тег\\nПример: Проверка, Иван Иванов, 2026-04-01, 2026-04-10, Высокий, Качество",
+    i_prv: "Предпросмотр (Основных {0} / Всего {1})", b_clr: "Очистить", b_add: "✓ Добавить {0} задач",
+    e_tit: "📤 Экспорт", e_dsc: "Экспорт {0} задач.",
+    e_csv: "Формат CSV", e_c_sub: "Стандартные данные", e_xls: "Формат Excel", e_x_sub: "Редактируется в Excel", b_cls: "Закрыть",
+    msg_imp: "Добавлено {0} задач!", unass: "Не назначен",
+    t_week: "📅 Сводка недели", v_assignee: "👤 Исполнитель", v_all: "Все",
+    al_warn: "⚠️ Уведомление", al_soon: "Срок в течение 3 дней", al_today: "Срок сегодня", al_none: "Нет срочных задач",
+    wk_title: "📅 Сводка недели", wk_due: "Срок на этой неделе", wk_comp: "Завершение на этой неделе", wk_od: "Просрочено", wk_none: "Задачи не найдены",
+    cm_title: "💬 Комментарии", cm_ph: "Введите заметки или информацию...", cm_add: "Добавить", cm_none: "Нет заметок",
+    pr_title: "🖨️ Печать / PDF", pr_btn: "Печать",
+    sort_lbl:"🔀 Сортировка",
+    t_trans:"🌐 Переводы", trans_title:"Массовый ввод русских названий", trans_sub:"Введите названия задач на русском языке",
+    trans_ja:"Японский", trans_ru:"Русский (введите)", trans_save:"✓ Сохранить всё", trans_done:"Готово", trans_empty:"Не заполнено", sort_date:"📅 Дата", sort_pri:"🚨 Приоритет", sort_prog:"📊 Прогресс", sort_reset:"↩ Вручную",
+    exp_all:"▼ Свернуть всё", col_all:"▶ Развернуть всё",
+    att_title: "📎 Вложения и ссылки", att_drop: "Перетащите фото или нажмите", att_drop_sub: "JPG / PNG / GIF (макс. 5 МБ)",
+    att_link_ph: "https:// Введите URL...", att_link_add: "Добавить", att_none: "Нет вложений",
+    att_open: "Открыть", att_size_err: "Файл слишком большой (макс. 5 МБ)", att_link_err: "Введите URL",
+    trans_exp: "📤 Экспорт CSV", trans_imp: "📥 Импорт CSV", trans_imp_ok: "Переводы импортированы",
+    t_dash: "📈 Дашборд",
+    dash_summary: "Общая сводка", dash_factory: "Прогресс по цеху", dash_priority: "Распределение приоритетов", dash_assignee: "Задачи по исполнителю", dash_completion: "Выполнено",
+    bulk_mode: "☑ Мультивыбор", bulk_done: "✅ Отметить выполненным", bulk_active: "🔄 Вернуть в работу", bulk_delete: "🗑 Удалить", bulk_count: "выбрано", bulk_all: "Выбрать всё", bulk_clear: "Снять",
+    imp_auto_done: "✅ Добавлено {0} задач (пропущено дублей: {1})",
+    imp_auto_none: "Новых задач нет (все дублируются)",
+    imp_dup_badge: "Дубль — пропущено"
+  }
+};
+
+function t(k, ...args) {
+  let str = DIC[st.lang]?.[k] || DIC['ja'][k] || k;
+  args.forEach((a, i) => str = str.replace(`{${i}}`, a));
+  return str;
+}
+function tFac(val) { return val === '合板工場' ? t('f_ply') : val === '単板工場' ? t('f_ven') : val; }
+
+// ═══════════════════════════════════════
+// INITIAL DATA
+// ═══════════════════════════════════════
+const INIT_TASKS = [
+  {id:1,title:"剥離対応手順について",title_en:"Delamination Response Procedure",title_ru:"Процедура устранения расслоения",factory:"合板工場",priority:"high",tags:["品質"],tags_en:["Quality"],tags_ru:["Качество"],start:"2026-03-22",end:"2026-03-28",progress:30,assignee:"原 / バカノフ",color:"#EF4444",exp:false,subtasks:[{id:100,title:"手順書→教育→標準化（レビュー中）",title_en:"Manual → Training → Standardization (In Review)",title_ru:"Инструкция → Обучение → Стандартизация (На рассмотрении)",progress:30,done:false,start:"2026-03-22",end:"2026-03-28"}]},
+  {id:2,title:"接着剤管理について",title_en:"Adhesive Management",title_ru:"Управление клеем",factory:"合板工場",priority:"high",tags:["品質"],tags_en:["Quality"],tags_ru:["Качество"],start:"2026-03-26",end:"2026-03-26",progress:60,assignee:"グラチョフ",color:"#EF4444",exp:false,subtasks:[{id:200,title:"記録徹底・シフト内完結（指示済）",title_en:"Thorough Recording, Shift Completion (Instructed)",title_ru:"Тщательный учёт, завершение в смене (указано)",progress:60,done:false,start:"2026-03-26",end:"2026-03-26"}]},
+  {id:3,title:"スプレッター清掃について",title_en:"Spreader Cleaning",title_ru:"Очистка намазчика",factory:"合板工場",priority:"high",tags:["品質"],tags_en:["Quality"],tags_ru:["Качество"],start:"2026-03-26",end:"2026-03-26",progress:60,assignee:"グラチョフ",color:"#EF4444",exp:false,subtasks:[{id:300,title:"ドクターロール清掃（指示済）",title_en:"Doctor Roll Cleaning (Instructed)",title_ru:"Очистка дозирующего вала (указано)",progress:60,done:false,start:"2026-03-26",end:"2026-03-26"}]},
+  {id:4,title:"グリース使用禁止について",title_en:"Grease Use Prohibition",title_ru:"Запрет использования смазки",factory:"合板工場",priority:"high",tags:["品質"],tags_en:["Quality"],tags_ru:["Качество"],start:"2026-03-22",end:"2026-03-26",progress:60,assignee:"グラチョフ",color:"#EF4444",exp:false,subtasks:[{id:400,title:"油使用禁止（指示済）",title_en:"Oil Use Prohibited (Instructed)",title_ru:"Запрет масла (указано)",progress:60,done:false,start:"2026-03-22",end:"2026-03-26"}]},
+  {id:5,title:"トリミング停止について",title_en:"Trimming Line Stoppage",title_ru:"Остановка линии обрезки",factory:"単板工場",priority:"high",tags:["品質","生産"],tags_en:["Quality","Production"],tags_ru:["Качество","Производство"],start:"2026-03-17",end:"2026-03-28",progress:30,assignee:"バカノフ / イワノフ",color:"#EF4444",exp:false,subtasks:[{id:500,title:"原因特定・メーカー確認（対応中）",title_en:"Root Cause Investigation, Maker Confirmation (In Progress)",title_ru:"Выявление причины, подтверждение производителя (в работе)",progress:30,done:false,start:"2026-03-17",end:"2026-03-28"}]},
+  {id:6,title:"コンベア自動化について",title_en:"Conveyor Automation",title_ru:"Автоматизация конвейера",factory:"合板工場",priority:"high",tags:["生産"],tags_en:["Production"],tags_ru:["Производство"],start:"2026-03-26",end:"2026-03-26",progress:20,assignee:"リモノフ",color:"#10B981",exp:false,subtasks:[{id:600,title:"再計画提出（遅延）",title_en:"Revised Plan Submission (Delayed)",title_ru:"Подача пересмотренного плана (задержка)",progress:20,done:false,start:"2026-03-26",end:"2026-03-26"}]},
+  {id:7,title:"スプレッター運用について",title_en:"Spreader Operation",title_ru:"Эксплуатация намазчика",factory:"合板工場",priority:"high",tags:["生産","品質"],tags_en:["Production","Quality"],tags_ru:["Производство","Качество"],start:"2026-03-25",end:"2026-03-25",progress:100,assignee:"プチーリン / 山崎",color:"#10B981",exp:false,subtasks:[{id:700,title:"SG付着防止（完了）",title_en:"SG Adhesion Prevention (Completed)",title_ru:"Предотвращение прилипания SG (завершено)",progress:100,done:true,start:"2026-03-25",end:"2026-03-25"}]},
+  {id:8,title:"台木サイズ問題について",title_en:"Block Size Issue",title_ru:"Проблема размера подкладок",factory:"単板工場",priority:"high",tags:["生産"],tags_en:["Production"],tags_ru:["Производство"],start:"2026-03-13",end:"2026-03-26",progress:20,assignee:"グラチョフ",color:"#10B981",exp:false,subtasks:[{id:800,title:"サイズ是正（再発）",title_en:"Size Correction (Recurrence)",title_ru:"Корректировка размера (повторение)",progress:20,done:false,start:"2026-03-13",end:"2026-03-26"}]},
+  {id:9,title:"熱板問題について",title_en:"Hot Press Plate Issue",title_ru:"Проблема горячих плит пресса",factory:"合板工場",priority:"high",tags:["設備","品質"],tags_en:["Equipment","Quality"],tags_ru:["Оборудование","Качество"],start:"2026-03-21",end:"2026-03-25",progress:30,assignee:"関係者",color:"#06B6D4",exp:false,subtasks:[{id:900,title:"メーカー協議（対応中）",title_en:"Manufacturer Consultation (In Progress)",title_ru:"Переговоры с производителем (в работе)",progress:30,done:false,start:"2026-03-21",end:"2026-03-25"}]},
+  {id:10,title:"接着不良分析について",title_en:"Adhesion Defect Analysis",title_ru:"Анализ дефектов склейки",factory:"合板工場",priority:"high",tags:["品質"],tags_en:["Quality"],tags_ru:["Качество"],start:"2026-03-26",end:"2026-03-26",progress:30,assignee:"クジャノワ",color:"#EF4444",exp:false,subtasks:[{id:1000,title:"原因特定（対応中）",title_en:"Root Cause Identification (In Progress)",title_ru:"Выявление причины (в работе)",progress:30,done:false,start:"2026-03-26",end:"2026-03-26"}]},
+  {id:11,title:"フィルター清掃について",title_en:"Filter Cleaning",title_ru:"Очистка фильтров",factory:"合板工場",priority:"medium",tags:["管理"],tags_en:["Management"],tags_ru:["Управление"],start:"2026-03-24",end:"2026-03-24",progress:60,assignee:"グラチョフ",color:"#8B5CF6",exp:false,subtasks:[{id:1100,title:"管理徹底（指示済）",title_en:"Thorough Management (Instructed)",title_ru:"Строгий контроль (указано)",progress:60,done:false,start:"2026-03-24",end:"2026-03-24"}]},
+  {id:12,title:"清掃徹底について",title_en:"Thorough Cleaning",title_ru:"Тщательная уборка",factory:"単板工場",priority:"high",tags:["管理"],tags_en:["Management"],tags_ru:["Управление"],start:"2026-03-24",end:"2026-03-28",progress:30,assignee:"バカノフ",color:"#8B5CF6",exp:false,subtasks:[{id:1200,title:"清掃責任明確化（対応中）",title_en:"Clarifying Cleaning Responsibility (In Progress)",title_ru:"Разграничение ответственности за уборку (в работе)",progress:30,done:false,start:"2026-03-24",end:"2026-03-28"}]},
+  {id:13,title:"表示方法改善について",title_en:"Display Method Improvement",title_ru:"Улучшение маркировки",factory:"合板工場",priority:"medium",tags:["管理"],tags_en:["Management"],tags_ru:["Управление"],start:"2026-03-26",end:"2026-03-26",progress:10,assignee:"グラチョフ",color:"#8B5CF6",exp:false,subtasks:[{id:1300,title:"色分け導入（提案中）",title_en:"Color Coding Introduction (Proposed)",title_ru:"Внедрение цветовой маркировки (предложено)",progress:10,done:false,start:"2026-03-26",end:"2026-03-26"}]},
+  {id:14,title:"リフト教育について",title_en:"Forklift Training",title_ru:"Обучение работе с погрузчиком",factory:"合板工場",priority:"medium",tags:["管理"],tags_en:["Management"],tags_ru:["Управление"],start:"2026-03-26",end:"2026-03-26",progress:10,assignee:"グリゴリエフ",color:"#8B5CF6",exp:false,subtasks:[{id:1400,title:"操作教育（開始）",title_en:"Operation Training (Started)",title_ru:"Обучение эксплуатации (начато)",progress:10,done:false,start:"2026-03-26",end:"2026-03-26"}]},
+  {id:15,title:"配線不良について",title_en:"Wiring Defect",title_ru:"Дефект проводки",factory:"単板工場",priority:"high",tags:["設備"],tags_en:["Equipment"],tags_ru:["Оборудование"],start:"2026-03-26",end:"2026-03-27",progress:10,assignee:"関係者",color:"#06B6D4",exp:false,subtasks:[{id:1500,title:"補修対応（対応待ち）",title_en:"Repair Response (Pending)",title_ru:"Ремонт (ожидание)",progress:10,done:false,start:"2026-03-26",end:"2026-03-27"}]},
+  {id:16,title:"シャフト取外しについて",title_en:"Shaft Removal",title_ru:"Снятие вала",factory:"合板工場",priority:"high",tags:["設備"],tags_en:["Equipment"],tags_ru:["Оборудование"],start:"2026-03-24",end:"2026-03-27",progress:30,assignee:"バカノフ/秋山",color:"#06B6D4",exp:false,subtasks:[{id:1600,title:"原因特定（確認中）",title_en:"Root Cause Identification (Investigating)",title_ru:"Выявление причины (в расследовании)",progress:30,done:false,start:"2026-03-24",end:"2026-03-27"}]},
+  {id:17,title:"スプレッター精度について",title_en:"Spreader Accuracy",title_ru:"Точность намазчика",factory:"合板工場",priority:"medium",tags:["品質"],tags_en:["Quality"],tags_ru:["Качество"],start:"2026-03-26",end:"2026-03-26",progress:10,assignee:"イワノフ",color:"#EF4444",exp:false,subtasks:[{id:1700,title:"定規面修正（対応待ち）",title_en:"Ruler Surface Correction (Pending)",title_ru:"Корректировка поверхности линейки (ожидание)",progress:10,done:false,start:"2026-03-26",end:"2026-03-26"}]},
+  {id:18,title:"清掃方法改善について",title_en:"Cleaning Method Improvement",title_ru:"Улучшение метода уборки",factory:"合板工場",priority:"low",tags:["改善"],tags_en:["Improvement"],tags_ru:["Улучшение"],start:"2026-03-26",end:"2026-03-26",progress:10,assignee:"ナウモフ",color:"#F59E0B",exp:false,subtasks:[{id:1800,title:"洗浄用品導入（提案中）",title_en:"Cleaning Supplies Introduction (Proposed)",title_ru:"Внедрение моющих средств (предложено)",progress:10,done:false,start:"2026-03-26",end:"2026-03-26"}]},
+  {id:19,title:"単板トレースについて",title_en:"Veneer Traceability",title_ru:"Отслеживаемость шпона",factory:"単板工場",priority:"medium",tags:["品質"],tags_en:["Quality"],tags_ru:["Качество"],start:"2026-03-26",end:"2026-03-26",progress:10,assignee:"バカノフ",color:"#EF4444",exp:false,subtasks:[{id:1900,title:"ロット管理（検討中）",title_en:"Lot Management (Under Consideration)",title_ru:"Управление партиями (рассматривается)",progress:10,done:false,start:"2026-03-26",end:"2026-03-26"}]},
+  {id:20,title:"接着剤可使時間について",title_en:"Adhesive Pot Life",title_ru:"Жизнеспособность клея",factory:"合板工場",priority:"high",tags:["品質"],tags_en:["Quality"],tags_ru:["Качество"],start:"2026-03-28",end:"2026-03-28",progress:60,assignee:"グラチョフ/ヴァレンティーナ",color:"#EF4444",exp:false,subtasks:[{id:2000,title:"8時間厳守（指示済）",title_en:"8-Hour Limit Enforced (Instructed)",title_ru:"Соблюдение 8-часового лимита (указано)",progress:60,done:false,start:"2026-03-28",end:"2026-03-28"}]},
+  {id:21,title:"人員配置について",title_en:"Personnel Assignment",title_ru:"Расстановка персонала",factory:"合板工場",priority:"high",tags:["生産"],tags_en:["Production"],tags_ru:["Производство"],start:"2026-03-28",end:"2026-03-28",progress:60,assignee:"グラチョフ",color:"#10B981",exp:false,subtasks:[{id:2100,title:"再配置（指示済）",title_en:"Reassignment (Instructed)",title_ru:"Перестановка (указано)",progress:60,done:false,start:"2026-03-28",end:"2026-03-28"}]},
+  {id:22,title:"トリミング定規について",title_en:"Trimming Guide Accuracy",title_ru:"Точность обрезного упора",factory:"単板工場",priority:"high",tags:["設備","品質"],tags_en:["Equipment","Quality"],tags_ru:["Оборудование","Качество"],start:"2026-03-28",end:"2026-03-28",progress:60,assignee:"イワノフ",color:"#06B6D4",exp:false,subtasks:[{id:2200,title:"直角精度（指示済）",title_en:"Right-Angle Accuracy (Instructed)",title_ru:"Точность прямого угла (указано)",progress:60,done:false,start:"2026-03-28",end:"2026-03-28"}]},
+  {id:23,title:"ロールコーターパッドについて",title_en:"Roll Coater Pad",title_ru:"Прокладка намазчика",factory:"合板工場",priority:"high",tags:["品質"],tags_en:["Quality"],tags_ru:["Качество"],start:"2026-03-22",end:"2026-03-26",progress:20,assignee:"関係者",color:"#EF4444",exp:false,subtasks:[{id:2300,title:"油脂完全禁止（再発あり）",title_en:"Complete Oil Ban (Recurrence)",title_ru:"Полный запрет масла (повторение)",progress:20,done:false,start:"2026-03-22",end:"2026-03-26"}]},
+  {id:24,title:"パッド材質変更について",title_en:"Pad Material Change",title_ru:"Замена материала прокладки",factory:"合板工場",priority:"high",tags:["設備"],tags_en:["Equipment"],tags_ru:["Оборудование"],start:"2026-03-21",end:"2026-03-26",progress:10,assignee:"関係者",color:"#06B6D4",exp:false,subtasks:[{id:2400,title:"樹脂化検討（検討中）",title_en:"Resin Material Study (Under Consideration)",title_ru:"Изучение применения смолы (рассматривается)",progress:10,done:false,start:"2026-03-21",end:"2026-03-26"}]},
+  {id:25,title:"サンダーライン押えローラー調整",title_en:"Sander Line Pinch Roller Adjustment",title_ru:"Регулировка прижимного ролика шлифовальной линии",factory:"単板工場",priority:"medium",tags:["設備"],tags_en:["Equipment"],tags_ru:["Оборудование"],start:"2026-03-30",end:"2026-03-31",progress:30,assignee:"秋山/関係者",color:"#06B6D4",exp:false,subtasks:[{id:2500,title:"指導・調整（対応中）",title_en:"Guidance & Adjustment (In Progress)",title_ru:"Инструктаж и регулировка (в работе)",progress:30,done:false,start:"2026-03-30",end:"2026-03-31"}]},
+  // ── ver7.2 追加タスク（Excelインポート） ──
+  {id:30,title:"スプレッター3.4号機のシャフトについて",title_ru:"Вал на спредерах №3 и №4",factory:"合板工場",priority:"urgent",tags:["設備"],tags_ru:["Оборудование"],start:"2026-03-24",end:"2026-04-02",progress:30,assignee:"バカノフ",color:"#06B6D4",exp:false,subtasks:[{id:3000,title:"PPRで設置対応指示",title_ru:"Установка в рамках ППР",progress:30,done:false,start:"2026-03-24",end:"2026-04-02"}]},
+  {id:31,title:"定規面高さ提案",title_ru:"Высота направляющей",factory:"合板工場",priority:"low",tags:["設備","品質"],tags_ru:["Оборудование","Качество"],start:"2026-03-29",end:"2026-03-31",progress:10,assignee:"イワノフ",color:"#06B6D4",exp:false,subtasks:[{id:3100,title:"一時中止（原状復帰）",title_ru:"Временно остановлено",progress:10,done:false,start:"2026-03-29",end:"2026-03-31"}]},
+  {id:32,title:"積載機改善提案について",title_ru:"Укладчик (предложение)",factory:"合板工場",priority:"low",tags:["生産","設備"],tags_ru:["Производство","Оборудование"],start:"2026-03-29",end:"2026-03-29",progress:20,assignee:"バカノフ",color:"#10B981",exp:false,subtasks:[{id:3200,title:"運用・構造見直し",title_ru:"Пересмотр конструкции и работы",progress:20,done:false,start:"2026-03-29",end:"2026-03-29"}]},
+  {id:33,title:"粘度計の変更について",title_ru:"Изменение вискозиметра",factory:"合板工場",priority:"high",tags:["品質","設備"],tags_ru:["Качество","Оборудование"],start:"2026-04-01",end:"2026-04-02",progress:30,assignee:"クジャノワ/ナウモフ",color:"#EF4444",exp:false,subtasks:[{id:3300,title:"設備選定・購買調査",title_ru:"Выбор оборудования и закупка",progress:30,done:false,start:"2026-04-01",end:"2026-04-02"}]},
+  {id:34,title:"梱包用の台について",title_ru:"Стол для упаковки",factory:"合板工場",priority:"medium",tags:["設備"],tags_ru:["Оборудование"],start:"2026-04-01",end:"2026-04-02",progress:30,assignee:"グラチョフ/メカニック",color:"#06B6D4",exp:false,subtasks:[{id:3400,title:"作業台改造中／完成次第使用",title_ru:"Переделка и замена",progress:30,done:false,start:"2026-04-01",end:"2026-04-02"}]},
+  {id:35,title:"台木位置提案",title_ru:"Размещение подкладок",factory:"単板工場",priority:"high",tags:["生産","管理"],tags_ru:["Производство","Управление"],start:"2026-04-01",end:"2026-04-02",progress:30,assignee:"イワン",color:"#10B981",exp:false,subtasks:[{id:3500,title:"配置ルール見直し・試作",title_ru:"Пересмотр размещения / испытания",progress:30,done:false,start:"2026-04-01",end:"2026-04-02"}]},
+  {id:36,title:"接着剤配合量について",title_ru:"Пропорции клея",factory:"合板工場",priority:"medium",tags:["技術"],tags_ru:["Технология"],start:"2026-03-31",end:"2026-04-02",progress:20,assignee:"ヴァレンティーナ",color:"#14B8A6",exp:false,subtasks:[{id:3600,title:"半分仕込み禁止の根拠確認／試験提案",title_ru:"Проверка обоснования запрета половинного замеса / предложение испытаний",progress:20,done:false,start:"2026-03-31",end:"2026-04-02"}]},
+  {id:37,title:"コールドプレス時間延長",title_ru:"Увеличение времени холодного прессования",factory:"合板工場",priority:"high",tags:["品質","生産"],tags_ru:["Качество","Производство"],start:"2026-03-31",end:"2026-04-01",progress:30,assignee:"クジャノワ/バカノフ",color:"#EF4444",exp:false,subtasks:[{id:3700,title:"標準見直し・改訂対応",title_ru:"Пересмотр стандарта",progress:30,done:false,start:"2026-03-31",end:"2026-04-01"}]},
+  {id:38,title:"プレス圧異常",title_ru:"Аномалия давления пресса",factory:"合板工場",priority:"urgent",tags:["設備","品質"],tags_ru:["Оборудование","Качество"],start:"2026-03-31",end:"2026-03-31",progress:20,assignee:"グラチョフ",color:"#06B6D4",exp:false,subtasks:[{id:3800,title:"異常原因調査",title_ru:"Проверка причин",progress:20,done:false,start:"2026-03-31",end:"2026-03-31"}]},
+  {id:39,title:"定盤について",title_ru:"Плиты пресса",factory:"合板工場",priority:"high",tags:["設備","品質"],tags_ru:["Оборудование","Качество"],start:"2026-03-31",end:"2026-03-31",progress:60,assignee:"グラチョフ",color:"#06B6D4",exp:false,subtasks:[{id:3900,title:"状態確認・改善指示",title_ru:"Проверка состояния и устранение",progress:60,done:false,start:"2026-03-31",end:"2026-03-31"}]},
+  {id:40,title:"返却用パレットについて",title_ru:"Возврат поддонов",factory:"合板工場",priority:"medium",tags:["組織"],tags_ru:["Организация"],start:"2026-03-29",end:"2026-03-30",progress:30,assignee:"グラチョフ/プチーリン",color:"#3B82F6",exp:false,subtasks:[{id:4000,title:"返却ルール策定・確認",title_ru:"Внедрение правил возврата и контроль",progress:30,done:false,start:"2026-03-29",end:"2026-03-30"}]},
+  {id:41,title:"ストッパー設置提案",title_ru:"Стоппер на линии шлифования",factory:"単板工場",priority:"low",tags:["技術"],tags_ru:["Технология"],start:"2026-03-30",end:"2026-03-30",progress:20,assignee:"バカノフ/イワノフ",color:"#14B8A6",exp:false,subtasks:[{id:4100,title:"スタッカー改善提案",title_ru:"Предложение установки",progress:20,done:false,start:"2026-03-30",end:"2026-03-30"}]},
+  {id:42,title:"台木ラックについて",title_ru:"Стеллаж для подкладок",factory:"単板工場",priority:"medium",tags:["組織"],tags_ru:["Организация"],start:"2026-04-02",end:"2026-04-02",progress:30,assignee:"グラチョフ",color:"#3B82F6",exp:false,subtasks:[{id:4200,title:"ラック製作指示",title_ru:"Изготовление стеллажа",progress:30,done:false,start:"2026-04-02",end:"2026-04-02"}]},
+  {id:43,title:"安全対策（蓋）について",title_ru:"Меры безопасности (крышки)",factory:"合板工場",priority:"urgent",tags:["技術"],tags_ru:["Технология"],start:"2026-04-02",end:"2026-04-02",progress:30,assignee:"イワノフ",color:"#14B8A6",exp:false,subtasks:[{id:4300,title:"カバー設置指示",title_ru:"Установка защитных крышек",progress:30,done:false,start:"2026-04-02",end:"2026-04-02"}]},
+  {id:44,title:"攪拌機（ミキサー）改善提案について",title_ru:"Улучшение клеевого смесителя",factory:"合板工場",priority:"high",tags:["設備","品質"],tags_ru:["Оборудование","Качество"],start:"2026-04-03",end:"2026-04-03",progress:20,assignee:"バカノフ/イワノフ/メカニック",color:"#06B6D4",exp:false,subtasks:[{id:4400,title:"現状ミキサーでは改善効果が不十分／対流（循環）を発生させる構造改善提案",title_ru:"Текущий смеситель не даёт достаточного эффекта / предложено конструктивное улучшение для создания конвекционных потоков",progress:20,done:false,start:"2026-04-03",end:"2026-04-03"}]},
+  {id:45,title:"合板の曲がりについて",title_ru:"Искривление фанеры",factory:"合板工場",priority:"high",tags:["品質","工程"],tags_ru:["Качество","Процесс"],start:"2026-04-03",end:"2026-04-03",progress:20,assignee:"イワノフ/製造責任者",color:"#EF4444",exp:false,subtasks:[{id:4500,title:"合板の曲がり発生に関する要因整理および改善案提示（乾燥・プレス・含水率・冷却条件の影響確認）",title_ru:"Анализ причин искривления фанеры и предложение мер (сушка, прессование, влажность, охлаждение)",progress:20,done:false,start:"2026-04-03",end:"2026-04-03"}]},
+  // ── ver7.6 追加タスク（PC localStorage 同期） ──
+  {id:46,title:"接着ライン搬出ローラー改良",title_ru:"Улучшение ролика выгрузки клеевой линии",factory:"合板工場",priority:"medium",tags:["設備"],tags_ru:["Оборудование"],start:"2026-03-03",end:"2026-03-30",progress:100,assignee:"秋山/修理工",color:"#06B6D4",exp:false,subtasks:[{id:4601,title:"現状確認・問題整理",title_ru:"Проверка состояния и выявление проблем",progress:100,done:true,start:"2026-03-03",end:"2026-03-10"},{id:4602,title:"改善案作成",title_ru:"Разработка предложений",progress:100,done:true,start:"2026-03-10",end:"2026-03-17"},{id:4603,title:"部品調達",title_ru:"Подбор деталей",progress:100,done:true,start:"2026-03-17",end:"2026-03-22"},{id:4604,title:"改良工事実施",title_ru:"Проведение модернизации",progress:100,done:true,start:"2026-03-22",end:"2026-03-28"},{id:4605,title:"動作確認・完了",title_ru:"Проверка работы и завершение",progress:100,done:true,start:"2026-03-28",end:"2026-03-30"}]},
+  {id:47,title:"接着ライン搬出センサー位置",title_ru:"Положение датчика выгрузки клеевой линии",factory:"合板工場",priority:"medium",tags:["設備"],tags_ru:["Оборудование"],start:"2026-03-10",end:"2026-04-01",progress:60,assignee:"秋山/計装師",color:"#06B6D4",exp:false,subtasks:[{id:4701,title:"センサー現状位置確認",title_ru:"Проверка текущего положения датчика",progress:100,done:true,start:"2026-03-10",end:"2026-03-17"},{id:4702,title:"最適位置検討",title_ru:"Определение оптимального положения",progress:100,done:true,start:"2026-03-17",end:"2026-03-24"},{id:4703,title:"仮設置・テスト",title_ru:"Пробная установка и тест",progress:60,done:false,start:"2026-03-24",end:"2026-03-31"},{id:4704,title:"本設置工事",title_ru:"Основной монтаж",progress:0,done:false,start:"2026-03-31",end:"2026-04-01"},{id:4705,title:"動作確認・完了",title_ru:"Проверка работы и завершение",progress:0,done:false,start:"2026-04-01",end:"2026-04-01"}]},
+  {id:48,title:"サンダーライン投入部",title_ru:"Секция загрузки шлифовальной линии",factory:"合板工場",priority:"high",tags:["設備"],tags_ru:["Оборудование"],start:"2026-04-03",end:"2026-04-30",progress:0,assignee:"秋山/計装師",color:"#06B6D4",exp:false,subtasks:[{id:4800,title:"投入部改善対応",title_ru:"Работы по улучшению секции загрузки",progress:0,done:false,start:"2026-04-03",end:"2026-04-30"}]},
+  {id:49,title:"接着ライン搬出部固定具",title_ru:"Крепление секции выгрузки клеевой линии",factory:"合板工場",priority:"medium",tags:["設備"],tags_ru:["Оборудование"],start:"2026-04-03",end:"2026-04-30",progress:0,assignee:"秋山/修理工/溶接工",color:"#06B6D4",exp:false,subtasks:[{id:4901,title:"固定具設計",title_ru:"Проектирование крепления",progress:0,done:false,start:"2026-04-03",end:"2026-04-10"},{id:4902,title:"材料調達",title_ru:"Закупка материалов",progress:0,done:false,start:"2026-04-10",end:"2026-04-15"},{id:4903,title:"製作",title_ru:"Изготовление",progress:0,done:false,start:"2026-04-15",end:"2026-04-22"},{id:4904,title:"取付工事",title_ru:"Монтаж",progress:0,done:false,start:"2026-04-22",end:"2026-04-28"},{id:4905,title:"動作確認",title_ru:"Проверка работы",progress:0,done:false,start:"2026-04-28",end:"2026-04-30"}]},
+  {id:50,title:"トリミングライン送り装置L部",title_ru:"Устройство подачи линии обрезки (секция L)",factory:"合板工場",priority:"medium",tags:["設備"],tags_ru:["Оборудование"],start:"2026-03-05",end:"2026-03-05",progress:100,assignee:"秋山",color:"#06B6D4",exp:false,subtasks:[{id:5001,title:"問題確認・原因調査",title_ru:"Анализ проблемы",progress:100,done:true,start:"2026-03-05",end:"2026-03-05"},{id:5002,title:"修理・調整実施",title_ru:"Ремонт и регулировка",progress:100,done:true,start:"2026-03-05",end:"2026-03-05"},{id:5003,title:"動作確認・完了",title_ru:"Проверка и завершение",progress:100,done:true,start:"2026-03-05",end:"2026-03-05"}]},
+  {id:51,title:"ホットプレス 材揃えシリンダー",title_ru:"Цилиндр выравнивания материала горячего пресса",factory:"合板工場",priority:"high",tags:["設備"],tags_ru:["Оборудование"],start:"2026-04-02",end:"2026-04-30",progress:60,assignee:"秋山",color:"#06B6D4",exp:false,subtasks:[{id:5101,title:"現状確認・不具合整理",title_ru:"Проверка состояния",progress:100,done:true,start:"2026-04-02",end:"2026-04-07"},{id:5102,title:"修理方法検討",title_ru:"Разработка метода ремонта",progress:100,done:true,start:"2026-04-07",end:"2026-04-12"},{id:5103,title:"部品手配",title_ru:"Заказ деталей",progress:60,done:false,start:"2026-04-12",end:"2026-04-20"},{id:5104,title:"修理実施",title_ru:"Выполнение ремонта",progress:0,done:false,start:"2026-04-20",end:"2026-04-27"},{id:5105,title:"動作確認・完了",title_ru:"Проверка работы и завершение",progress:0,done:false,start:"2026-04-27",end:"2026-04-30"}]},
+  {id:52,title:"現場に写真表示作成",title_ru:"Создание фотовыводов на рабочем месте",factory:"合板工場",priority:"medium",tags:["管理"],tags_ru:["Управление"],start:"2026-04-01",end:"2026-04-30",progress:0,assignee:"秋山",color:"#8B5CF6",exp:false,subtasks:[{id:5200,title:"撮影・編集・掲示対応",title_ru:"Съёмка, редактирование и размещение",progress:0,done:false,start:"2026-04-01",end:"2026-04-30"}]},
+  {id:53,title:"トリミングライン廃材パレット",title_ru:"Поддон для отходов линии обрезки",factory:"合板工場",priority:"medium",tags:["設備","管理"],tags_ru:["Оборудование","Управление"],start:"2026-04-03",end:"2026-04-30",progress:0,assignee:"秋山/製缶部",color:"#06B6D4",exp:false,subtasks:[{id:5301,title:"現状確認・設計",title_ru:"Проверка состояния и проектирование",progress:0,done:false,start:"2026-04-03",end:"2026-04-10"},{id:5302,title:"材料手配",title_ru:"Заказ материалов",progress:0,done:false,start:"2026-04-10",end:"2026-04-17"},{id:5303,title:"製作",title_ru:"Изготовление",progress:0,done:false,start:"2026-04-17",end:"2026-04-24"},{id:5304,title:"設置・確認",title_ru:"Установка и проверка",progress:0,done:false,start:"2026-04-24",end:"2026-04-30"}]},
+  {id:54,title:"接着ライン糊付け後ガイドパネル",title_ru:"Направляющая панель после нанесения клея",factory:"合板工場",priority:"high",tags:["設備","品質"],tags_ru:["Оборудование","Качество"],start:"2026-03-01",end:"2026-03-30",progress:100,assignee:"秋山/修理工",color:"#06B6D4",exp:false,subtasks:[{id:5401,title:"問題確認・設計",title_ru:"Анализ проблемы и проектирование",progress:100,done:true,start:"2026-03-01",end:"2026-03-10"},{id:5402,title:"材料調達",title_ru:"Закупка материалов",progress:100,done:true,start:"2026-03-10",end:"2026-03-17"},{id:5403,title:"製作",title_ru:"Изготовление",progress:100,done:true,start:"2026-03-17",end:"2026-03-22"},{id:5404,title:"取付工事",title_ru:"Монтаж",progress:100,done:true,start:"2026-03-22",end:"2026-03-28"},{id:5405,title:"動作確認・完了",title_ru:"Проверка работы и завершение",progress:100,done:true,start:"2026-03-28",end:"2026-03-30"}]},
+  {id:55,title:"接着ライン堆積リフター定規",title_ru:"Линейка подъёмника накопителя клеевой линии",factory:"合板工場",priority:"high",tags:["設備"],tags_ru:["Оборудование"],start:"2026-04-03",end:"2026-04-30",progress:0,assignee:"秋山",color:"#06B6D4",exp:false,subtasks:[{id:5501,title:"現状確認・問題整理",title_ru:"Проверка состояния",progress:0,done:false,start:"2026-04-03",end:"2026-04-10"},{id:5502,title:"設計・材料手配",title_ru:"Проектирование и заказ",progress:0,done:false,start:"2026-04-10",end:"2026-04-17"},{id:5503,title:"製作",title_ru:"Изготовление",progress:0,done:false,start:"2026-04-17",end:"2026-04-24"},{id:5504,title:"取付工事",title_ru:"Монтаж",progress:0,done:false,start:"2026-04-24",end:"2026-04-28"},{id:5505,title:"動作確認・完了",title_ru:"Проверка работы и завершение",progress:0,done:false,start:"2026-04-28",end:"2026-04-30"}]}
+];
+
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+let tasks;
+try { 
+  let s = localStorage.getItem(LS_KEY);
+  if (!s) s = localStorage.getItem('gohankojo-v6');
+  if (!s) s = localStorage.getItem('gohankojo-v5');
+  if (!s) s = localStorage.getItem('gohankojo-v4');
+  if (!s) s = localStorage.getItem('gohankojo-v3');
+  if (!s) s = localStorage.getItem('gohankojo-v2.1');
+  if (!s) s = localStorage.getItem('gohankojo-v2');
+  tasks = s ? JSON.parse(s) : deep(INIT_TASKS); 
+} catch(e) { 
+  tasks = deep(INIT_TASKS); 
+}
+
+// 既知タイトルのロシア語マッピング（新規タスク自動補完用）
+const KNOWN_RU = {
+  '接着ライン糊付け後ガイドパネル': 'Направляющая панель после нанесения клея',
+  '接着ライン糊付け後ガイド': 'Направляющая после нанесения клея',
+  '接着ライン堆積リフター定規': 'Линейка лифтера укладки клеевой линии',
+  '接着ライン堆積リフター': 'Лифтер укладки клеевой линии',
+  '合板の曲がりについて': 'О деформации фанеры',
+  '合板の曲がりに': 'О деформации фанеры',
+  '攪拌機（ミキサー）': 'Мешалка (миксер)',
+  '攪拌機': 'Мешалка',
+  '安全対策（蓋）': 'Меры безопасности (крышка)',
+  '安全対策': 'Меры безопасности',
+  '台木ラックについて': 'О стеллаже подкладок',
+  '台木ラック': 'Стеллаж подкладок',
+  '接着ライン搬出ローラー改良': 'Улучшение роликов выгрузки клеевой линии',
+  '接着ライン搬出センサー位置': 'Положение датчика выгрузки клеевой линии',
+  '接着ライン搬出部固定具': 'Крепление секции выгрузки клеевой линии',
+  '接着ライン搬出センサー': 'Датчик выгрузки клеевой линии',
+  'サンダーライン投入部': 'Секция загрузки шлифовальной линии',
+  'サンダーライン押えローラー': 'Прижимной ролик шлифовальной линии',
+  'トリミングライン送り装置L部': 'Устройство подачи линии обрезки (секция L)',
+  'トリミングライン廃材パレット': 'Поддон для отходов линии обрезки',
+  'トリミングライン': 'Линия обрезки',
+  'ホットプレス 材揃えシリンダー': 'Цилиндр выравнивания материала горячего пресса',
+  'ホットプレス': 'Горячий пресс',
+  '現場に写真表示作成': 'Создание фотовыводов на рабочем месте',
+  'ロールコーター糊量調整': 'Регулировка количества клея валкового покрывателя',
+  'ロールコーターパッド': 'Прокладка намазчика',
+  '点精度確認': 'Проверка точности позиции',
+  'コンベア自動化': 'Автоматизация конвейера',
+  '接着ライン糊付後センサー位置': 'Положение датчика после нанесения клея',
+  '台木サイズ問題': 'Проблема размера подкладок',
+  'パッド材質変更': 'Замена материала прокладки',
+  '人員配置': 'Расстановка персонала',
+  '接着剤可使時間': 'Жизнеспособность клея',
+  'スプレッター': 'Намазчик',
+  'コンベア': 'Конвейер',
+  '接着ライン': 'Клеевая линия',
+  'サンダーライン': 'Шлифовальная линия',
+  '合板': 'Фанера',
+  '台木': 'Подкладки',
+};
+
+function applyKnownRu(titleJa){
+  if(KNOWN_RU[titleJa]) return KNOWN_RU[titleJa];
+  const keys = Object.keys(KNOWN_RU).sort((a,b) => b.length - a.length);
+  for(const k of keys){ if(titleJa.includes(k)) return KNOWN_RU[k]; }
+  return titleJa; // フォールバック：日本語のまま
+}
+
+tasks.forEach(t=>{
+  if(!t.factory) t.factory='合板工場';
+  // localstorageの古いデータに翻訳フィールドをマージ
+  const init = INIT_TASKS.find(i => i.id === t.id);
+  if(init) {
+    if(!t.title_en) t.title_en = init.title_en;
+    if(!t.title_ru) t.title_ru = init.title_ru;
+    if(!t.tags_en)  t.tags_en  = init.tags_en;
+    if(!t.tags_ru)  t.tags_ru  = init.tags_ru;
+    t.subtasks.forEach(sub => {
+      const isub = init.subtasks.find(s => s.id === sub.id);
+      if(isub) {
+        if(!sub.title_en) sub.title_en = isub.title_en;
+        if(!sub.title_ru) sub.title_ru = isub.title_ru;
+      }
+      // サブタスクもKNOWN_RUで補完
+      if(!sub.title_ru || sub.title_ru === sub.title)
+        sub.title_ru = applyKnownRu(sub.title);
+    });
+  } else {
+    // 新規タスク：KNOWN_RUで自動補完
+    if(!t.title_ru || t.title_ru === t.title)
+      t.title_ru = applyKnownRu(t.title);
+    // タグ補完
+    const TAG_MAP_INIT = {'品質':'Качество','生産':'Производство','設備':'Оборудование','管理':'Управление','改善':'Улучшение','購入':'Закупка','工程':'Процесс','安全':'Безопасность','組織':'Организация','技術':'Технология'};
+    if(!t.tags_ru || !t.tags_ru.length)
+      t.tags_ru = (t.tags||[]).map(tag => TAG_MAP_INIT[tag] || tag);
+    // サブタスクも補完
+    (t.subtasks||[]).forEach(sub => {
+      if(!sub.title_ru || sub.title_ru === sub.title)
+        sub.title_ru = applyKnownRu(sub.title);
+    });
+  }
+});
+// ver7.2: INIT_TASKSに新規追加されたタスクをlocalStorageデータにマージ
+INIT_TASKS.forEach(initTask => {
+  if(!tasks.find(t => t.id === initTask.id)){
+    tasks.push(deep(initTask));
+  }
+});
+// ver7.6: PC側で削除されたINIT_TASKSのタスクをlocalStorageからも除去
+const DELETED_INIT_IDS = [26, 27, 28, 29];
+tasks = tasks.filter(t => !DELETED_INIT_IDS.includes(t.id));
+// 変更をlocalStorageに反映（マイグレーション）
+try { save(); } catch(e) {}
+
+const st = {
+  lang: localStorage.getItem('gohankojo-lang') || 'ja',
+  darkMode: localStorage.getItem('gohankojo-dark') === '1',
+  view: window.innerWidth <= 768 ? 'list' : 'gantt', fp:'all', ft:'all', fs:'all', ff:'all', fa:'all',
+  modal:false, modalType:'task',
+  selectedIds: [], bulkMode: false,
+  statsCollapsed: window.innerWidth <= 768,
+  eid:null, tempId: null, form:{}, newSubInput:'', newComment:'',
+  expandedSecs:{sub:true, cm:true, att:true},
+  importTab:'file', importPreview:[], importText:'',
+  alertDismissed: false,
+  sortOrder: null,      // null=手動順 | 'start' | 'priority' | 'progress'
+  allExpanded: false,   // 全サブタスク展開状態
+  dragIndex: null,      // ドラッグ中のタスクindex
+  dragOverIndex: null,  // ドラッグオーバー中のindex
+};
+
+// コメントデータ（タスクIDキー）
+let comments = {};
+try { comments = JSON.parse(localStorage.getItem('gohankojo-comments')||'{}'); } catch(e){}
+function saveComments(){ try{ localStorage.setItem('gohankojo-comments', JSON.stringify(comments)); }catch(e){} }
+
+// 添付データ（タスクIDキー）{ type:'image'|'link', name, data(base64 or url), size? }
+let attachments = {};
+try { attachments = JSON.parse(localStorage.getItem('gohankojo-attachments')||'{}'); } catch(e){}
+function saveAttachments(){
+  try{ localStorage.setItem('gohankojo-attachments', JSON.stringify(attachments)); }
+  catch(e){ alert('ストレージ容量が不足しています。古い添付を削除してください。'); }
+}
+function getAttachments(taskId){ return attachments[taskId] || []; }
+
+// 画像ライトボックス表示
+function openLightbox(src){
+  const lb = document.createElement('div');
+  lb.className = 'lightbox-overlay';
+  lb.innerHTML = `<button class="lightbox-close" onclick="this.parentElement.remove()">✕</button><img class="lightbox-img" src="${src}">`;
+  lb.addEventListener('click', e=>{ if(e.target===lb) lb.remove(); });
+  document.body.appendChild(lb);
+}
+
+// 添付画像を追加（Base64）
+function addAttachmentImage(taskId, file){
+  const MAX = 5 * 1024 * 1024; // 5MB
+  if(file.size > MAX){ alert(t('att_size_err')); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    if(!attachments[taskId]) attachments[taskId] = [];
+    attachments[taskId].push({
+      type: 'image',
+      name: file.name,
+      data: e.target.result,
+      size: file.size,
+      date: new Date().toISOString().slice(0,10)
+    });
+    saveAttachments();
+    render();
+  };
+  reader.readAsDataURL(file);
+}
+
+// 添付リンクを追加
+function addAttachmentLink(taskId){
+  const input = document.getElementById('att-link-input-'+taskId);
+  const url = (input?.value||'').trim();
+  if(!url){ alert(t('att_link_err')); return; }
+  const finalUrl = url.startsWith('http')?url:'https://'+url;
+  const name = url.replace(/^https?:\/\//,'').split('/')[0];
+  if(!attachments[taskId]) attachments[taskId] = [];
+  attachments[taskId].push({
+    type: 'link', name, data: finalUrl,
+    date: new Date().toISOString().slice(0,10)
+  });
+  saveAttachments();
+  if(input) input.value = '';
+  render();
+}
+
+// 添付削除
+function deleteAttachment(taskId, idx){
+  if(!attachments[taskId]) return;
+  attachments[taskId].splice(idx, 1);
+  saveAttachments();
+  render();
+}
+
+// ドラッグ＆ドロップイベント
+function handleAttDrop(e, taskId){
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  const files = e.dataTransfer?.files;
+  if(files && files.length > 0){
+    Array.from(files).forEach(f => {
+      if(f.type.startsWith('image/')) addAttachmentImage(taskId, f);
+    });
+  }
+}
+function handleAttDragOver(e){ e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+function handleAttDragLeave(e){ e.currentTarget.classList.remove('drag-over'); }
+
+const scrollState = { gcTop: 0, gcLeft: -1, lvTop: 0, sbarTop: 0, modalTop: 0 };
+
+// ═══════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════
+function deep(o){return JSON.parse(JSON.stringify(o));}
+function pd(s){return new Date(s+'T00:00:00');}
+function fd(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');return`${y}-${m}-${dd}`;}
+function dayDiff(a,b){return Math.round((b-a)/864e5);}
+function dayOff(s){return dayDiff(new Date(GANTT_START),pd(s));}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function ea(s){return String(s||'').replace(/"/g,'&quot;').replace(/&/g,'&amp;');}
+function plabel(p){return p==='urgent'?t('p_u'):p==='high'?t('p_h'):p==='medium'?t('p_m'):t('p_l');}
+function pclass(p){return p==='urgent'?'pu':p==='high'?'ph':p==='medium'?'pm':'pl';}
+function isOD(t_obj){const today=new Date();today.setHours(0,0,0,0);return pd(t_obj.end)<today&&t_obj.progress<100;}
+function nextId(){return tasks.length?Math.max(...tasks.map(t=>t.id))+1:1;}
+function taskColor(tags,idx){const m=(tags[0]||'').trim();return CAT_COLOR[m]||COLORS[idx%COLORS.length];}
+function save(){try{localStorage.setItem(LS_KEY,JSON.stringify(tasks));}catch(e){}}
+
+// 文字列類似度（バイグラムJaccard係数）
+function similarity(a, b){
+  if(a===b) return 1.0;
+  if(!a||!b) return 0.0;
+  const bigrams=s=>{const set=new Set();for(let i=0;i<s.length-1;i++)set.add(s.slice(i,i+2));return set;};
+  const sa=bigrams(a),sb=bigrams(b);
+  let intersect=0;sa.forEach(bg=>{if(sb.has(bg))intersect++;});
+  return(2*intersect)/(sa.size+sb.size);
+}
+
+// ── 多言語ヘルパー ──
+function taskTitle(task){
+  if(st.lang==='en'&&task.title_en)return task.title_en;
+  if(st.lang==='ru'&&task.title_ru)return task.title_ru;
+  return task.title;
+}
+function subTitle(sub){
+  if(st.lang==='en'&&sub.title_en)return sub.title_en;
+  if(st.lang==='ru'&&sub.title_ru)return sub.title_ru;
+  return sub.title;
+}
+function taskTags(task){
+  if(st.lang==='en'&&task.tags_en&&task.tags_en.length)return task.tags_en;
+  if(st.lang==='ru'&&task.tags_ru&&task.tags_ru.length)return task.tags_ru;
+  return task.tags;
+}
+// 担当者表示：言語に応じて人名・用語を変換
+const ASSIGNEE_MAP = {
+  // カタカナ → ロシア語（キリル文字）・英語
+  'バカノフ':   {en:'Bakanov',    ru:'Баканов'},
+  'グラチョフ': {en:'Grachev',    ru:'Грачёв'},
+  'イワノフ':   {en:'Ivanov',     ru:'Иванов'},
+  'プチーリン': {en:'Putilin',    ru:'Путилин'},
+  'リモノフ':   {en:'Limonov',    ru:'Лимонов'},
+  'クジャノワ': {en:'Kuzhanova',  ru:'Кужанова'},
+  'グリゴリエフ':{en:'Grigoriev', ru:'Григорьев'},
+  'ナウモフ':   {en:'Naumov',     ru:'Наумов'},
+  'ヴァレンティーナ':{en:'Valentina', ru:'Валентина'},
+  // 日本語固有名詞
+  '原':         {en:'Hara',       ru:'Хара'},
+  '山崎':       {en:'Yamazaki',   ru:'Ямадзаки'},
+  '秋山':       {en:'Akiyama',    ru:'Акияма'},
+  // 共通用語
+  'イワン':      {en:'Ivan',          ru:'Иван'},
+  '修理工':      {en:'Repairman',      ru:'Ремонтник'},
+  '関係者':     {en:'Stakeholders', ru:'Ответственные'},
+  'メカニック':  {en:'Mechanic',      ru:'Механик'},
+  '溶接工':     {en:'Welder',         ru:'Сварщик'},
+  '製缶部':     {en:'Boilermaker',    ru:'Котельный цех'},
+  '製造責任者':  {en:'Prod. Manager', ru:'Нач. производства'},
+  '計装師':     {en:'Instrument Tech',ru:'Приборист'},
+};
+function taskAssignee(task){
+  const a = task.assignee || '';
+  if(!a) return t('unass');
+  if(st.lang==='ja') return a;
+  let result = a;
+  // ASSIGNEE_MAP（長い名前から順に置換）
+  const keys = Object.keys(ASSIGNEE_MAP).sort((x,y) => y.length - x.length);
+  for(const k of keys){
+    const rep = ASSIGNEE_MAP[k][st.lang] || ASSIGNEE_MAP[k].ru || k;
+    result = result.split(k).join(rep);
+  }
+  // カスタム担当者マップで補完
+  try {
+    const customMap = JSON.parse(localStorage.getItem('gohankojo-assignee-ru')||'{}');
+    Object.keys(customMap).sort((a,b)=>b.length-a.length).forEach(k=>{
+      if(customMap[k]) result = result.split(k).join(customMap[k]);
+    });
+  } catch(e){}
+  return result;
+}
+// モーダルのタグ入力欄表示（現在言語のタグ名で表示）
+function formTagsDisplay(form){
+  if(!form.tags||!form.tags.length) return '';
+  return form.tags.map(jaTag=>tagLabel(jaTag)).join(', ');
+}
+// 表示ラベル→内部jaキーに逆変換（モーダルのタグ入力用）
+function jaTagFromLabel(label){
+  const map = {
+    'Quality':'品質','Production':'生産','Equipment':'設備','Management':'管理','Improvement':'改善',
+    'Качество':'品質','Производство':'生産','Оборудование':'設備','Управление':'管理','Улучшение':'改善',
+    '品質':'品質','生産':'生産','設備':'設備','管理':'管理','改善':'改善'
+  };
+  return map[label] || label;
+}
+
+function buildAlertBanner(){ return ''; }
+
+// ═══════════════════════════════════════
+// 新機能② 担当者フィルターバー
+// ═══════════════════════════════════════
+function buildAssigneeFilter(){
+  const assignees=allAssignees();
+  if(!assignees.length) return '';
+  const chips=assignees.map(a=>{
+    const disp=taskAssignee({assignee:a});
+    return`<button class="ass-chip${st.fa===a?' on':''}" onclick="setFA('${ea(a)}')">${esc(disp)}</button>`;
+  }).join('');
+  return`<div class="ass-filter">
+    <span style="font-size:11px;font-weight:700;color:var(--text-2);flex-shrink:0">${t('v_assignee')}:</span>
+    <button class="ass-chip${st.fa==='all'?' on':''}" onclick="setFA('all')">${t('v_all')}</button>
+    ${chips}
+  </div>`;
+}
+function setFA(v){st.fa=v;render();}
+
+// ═══════════════════════════════════════
+// モバイル用UI
+// ═══════════════════════════════════════
+function buildMobNav(){
+  const isMob = window.innerWidth <= 768;
+  if(!isMob) return '';
+  // モバイルは4タブ（trans=翻訳管理はPCのみ） ④
+  const views = [
+    {id:'gantt', icon:'📊', label:t('t_gantt')},
+    {id:'list',  icon:'📋', label:t('t_list')},
+    {id:'week',  icon:'📅', label:t('t_week')},
+    {id:'dash',  icon:'📈', label:t('t_dash')},
+  ];
+  const btns = views.map(v =>
+    `<button class="mob-nav-btn${st.view===v.id?' on':''}" onclick="setView('${v.id}')">
+      <span class="mob-icon">${v.icon}</span>
+      <span>${v.label}</span>
+    </button>`
+  ).join('');
+  return `<nav class="mob-nav">${btns}</nav>`;
+}
+
+function toggleMobMenu(){
+  const sbar = document.querySelector('.sbar');
+  const overlay = document.getElementById('sbar-overlay');
+  if(!sbar) return;
+  sbar.classList.toggle('open');
+  if(overlay) overlay.classList.toggle('open');
+}
+function closeMobSidebar(){
+  const sbar = document.querySelector('.sbar');
+  const overlay = document.getElementById('sbar-overlay');
+  if(sbar) sbar.classList.remove('open');
+  if(overlay) overlay.classList.remove('open');
+}
+
+// ═══════════════════════════════════════
+// 翻訳管理ビュー
+// ═══════════════════════════════════════
+function buildTransManager(){
+  // タスク・サブタスクそれぞれの翻訳状態をカウント
+  let totalItems = 0, translatedItems = 0;
+  tasks.forEach(task => {
+    totalItems++;
+    if(task.title_ru && task.title_ru !== task.title) translatedItems++;
+    (task.subtasks||[]).forEach(sub => {
+      totalItems++;
+      if(sub.title_ru && sub.title_ru !== sub.title) translatedItems++;
+    });
+  });
+  const untranslatedCount = totalItems - translatedItems;
+
+  // タスク行 + サブタスク行を生成
+  const rows = tasks.map(task => {
+    const isTrans = task.title_ru && task.title_ru !== task.title;
+    const taskRow = `<tr style="border-bottom:1px solid var(--border-light);background:var(--surface);">
+      <td style="padding:10px 12px;font-size:13px;font-weight:700;color:var(--text);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${ea(task.title)}">${esc(task.title)}</td>
+      <td style="padding:10px 12px;">
+        <input type="text"
+          value="${ea(isTrans ? task.title_ru : '')}"
+          placeholder="Введите на русском..."
+          style="width:100%;padding:7px 10px;border:1px solid ${isTrans?'var(--low)':'#CBD5E1'};border-radius:7px;font-size:13px;font-family:inherit;background:var(--surface);color:var(--text);outline:none;"
+          oninput="updateTransRu('t_${task.id}', this.value)"
+          onfocus="this.style.borderColor='var(--primary)'"
+          onblur="this.style.borderColor=this.value?'var(--low)':'#CBD5E1'">
+      </td>
+      <td style="padding:10px 12px;text-align:center;">${isTrans?'<span style="color:var(--low);font-weight:700;">✓</span>':'<span style="color:var(--muted);">—</span>'}</td>
+    </tr>`;
+
+    // サブタスク行
+    const subRows = (task.subtasks||[]).map(sub => {
+      const isSubTrans = sub.title_ru && sub.title_ru !== sub.title;
+      return `<tr style="border-bottom:1px solid var(--border-light);background:#FAFAFA;">
+        <td style="padding:7px 12px 7px 28px;font-size:12px;color:var(--text-2);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${ea(sub.title)}">└ ${esc(sub.title)}</td>
+        <td style="padding:7px 12px;">
+          <input type="text"
+            value="${ea(isSubTrans ? sub.title_ru : '')}"
+            placeholder="Введите на русском..."
+            style="width:100%;padding:5px 8px;border:1px solid ${isSubTrans?'var(--low)':'#CBD5E1'};border-radius:6px;font-size:12px;font-family:inherit;background:var(--surface);color:var(--text);outline:none;"
+            oninput="updateTransRu('s_${task.id}_${sub.id}', this.value)"
+            onfocus="this.style.borderColor='var(--primary)'"
+            onblur="this.style.borderColor=this.value?'var(--low)':'#CBD5E1'">
+        </td>
+        <td style="padding:7px 12px;text-align:center;">${isSubTrans?'<span style="color:var(--low);font-size:11px;font-weight:700;">✓</span>':'<span style="color:var(--muted);font-size:11px;">—</span>'}</td>
+      </tr>`;
+    }).join('');
+
+    return taskRow + subRows;
+  }).join('');
+
+  return `<div style="flex:1;min-height:0;overflow-y:auto;padding:24px;background:var(--bg);">
+    <div style="max-width:900px;margin:0 auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <div>
+          <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:4px;">${t('trans_title')}</div>
+          <div style="font-size:13px;color:var(--text-2);">
+            タスク＋サブタスク合計 ${totalItems}件 &nbsp;
+            <span style="color:var(--low);font-weight:700;">✓ ${translatedItems}件完了</span> /
+            <span style="color:var(--muted);">未入力 ${untranslatedCount}件</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button onclick="exportTransCSV()" style="padding:9px 16px;background:var(--surface);color:var(--text-2);border:1px solid var(--border);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">
+            ${t('trans_exp')}
+          </button>
+          <label style="padding:9px 16px;background:var(--surface);color:var(--text-2);border:1px solid var(--border);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">
+            ${t('trans_imp')}
+            <input type="file" accept=".csv" style="display:none;" onchange="importTransCSV(this)">
+          </label>
+          <button onclick="saveAllTrans()" style="padding:9px 20px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 2px 8px rgba(59,130,246,0.3);">
+            ${t('trans_save')}
+          </button>
+        </div>
+      </div>
+      <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow-sm);">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="background:var(--bg);border-bottom:2px solid var(--border);">
+              <th style="padding:12px;text-align:left;font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.05em;width:35%;">🇯🇵 ${t('trans_ja')}</th>
+              <th style="padding:12px;text-align:left;font-size:11px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.05em;">🇷🇺 ${t('trans_ru')}</th>
+              <th style="padding:12px;text-align:center;font-size:11px;font-weight:700;color:var(--text-2);width:60px;">状態</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <div style="height:24px;"></div>
+
+      <!-- 担当者翻訳セクション -->
+      <div style="background:var(--surface);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow-sm);">
+        <div style="background:var(--bg);padding:12px 16px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:8px;">
+          <span style="font-size:14px;font-weight:800;color:var(--text);">👤 担当者翻訳</span>
+          <span style="font-size:11px;color:var(--muted);">ASSIGNEE_MAPに登録されていない担当者を追加できます</span>
+        </div>
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr style="background:var(--bg);border-bottom:1px solid var(--border);">
+              <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text-2);width:35%;">🇯🇵 担当者（日本語）</th>
+              <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text-2);">🇷🇺 ロシア語</th>
+              <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:700;color:var(--text-2);width:60px;">状態</th>
+            </tr>
+          </thead>
+          <tbody>${buildAssigneeTransRows()}</tbody>
+        </table>
+        <div style="padding:12px 16px;border-top:1px solid var(--border-light);display:flex;gap:8px;align-items:center;">
+          <input id="new-assignee-ja" type="text" placeholder="日本語の担当者名..." style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit;background:var(--surface);color:var(--text);outline:none;">
+          <input id="new-assignee-ru" type="text" placeholder="Имя на русском..." style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit;background:var(--surface);color:var(--text);outline:none;">
+          <button onclick="addAssigneeMap()" style="padding:7px 16px;background:var(--primary);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">＋ 追加</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;font-size:11px;color:var(--muted);text-align:center;">
+        ※ 「全て保存」を押すとタスク・サブタスク全てのロシア語タイトルが保存されます
+      </div>
+    </div>
+  </div>`;
+}
+
+// 翻訳を一時的に保持するバッファ（キー形式: t_タスクID / s_タスクID_サブID）
+const transBuffer = {};
+function updateTransRu(key, val){
+  transBuffer[key] = val;
+}
+function saveAllTrans(){
+  tasks.forEach(task => {
+    // タスクタイトル
+    const tval = transBuffer['t_' + task.id];
+    if(tval !== undefined){
+      task.title_ru = tval.trim() || task.title;
+    }
+    // サブタスクタイトル
+    (task.subtasks||[]).forEach(sub => {
+      const sval = transBuffer['s_' + task.id + '_' + sub.id];
+      if(sval !== undefined){
+        sub.title_ru = sval.trim() || sub.title;
+      }
+    });
+  });
+  save();
+  Object.keys(transBuffer).forEach(k => delete transBuffer[k]);
+  render();
+  setTimeout(()=>{
+    const msg = document.createElement('div');
+    msg.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#10B981;color:#fff;padding:12px 24px;border-radius:10px;font-weight:700;font-size:14px;z-index:9000;box-shadow:0 4px 16px rgba(16,185,129,0.4);animation:slideDown .3s ease;';
+    msg.textContent = '✓ ロシア語タイトルを保存しました';
+    document.body.appendChild(msg);
+    setTimeout(()=>msg.remove(), 2500);
+  }, 100);
+}
+
+// 翻訳CSVエクスポート
+function exportTransCSV(){
+  const BOM = '\uFEFF';
+  const header = 'type,task_id,sub_id,title_ja,title_ru';
+  const rows = [];
+  tasks.forEach(task => {
+    const taskRu = (task.title_ru && task.title_ru !== task.title) ? task.title_ru : '';
+    rows.push([
+      'task',
+      task.id,
+      '',
+      '"' + task.title.replace(/"/g,'""') + '"',
+      '"' + taskRu.replace(/"/g,'""') + '"'
+    ].join(','));
+    (task.subtasks||[]).forEach(sub => {
+      const subRu = (sub.title_ru && sub.title_ru !== sub.title) ? sub.title_ru : '';
+      rows.push([
+        'sub',
+        task.id,
+        sub.id,
+        '"' + sub.title.replace(/"/g,'""') + '"',
+        '"' + subRu.replace(/"/g,'""') + '"'
+      ].join(','));
+    });
+  });
+  const csv = BOM + [header, ...rows].join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'translation_' + fd(new Date()) + '.csv';
+  a.click();
+}
+
+// 翻訳CSVインポート
+function importTransCSV(input){
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const text = e.target.result.replace(/^\uFEFF/, ''); // BOM除去
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+      if(lines.length < 2){ alert('CSVが空です'); return; }
+      let imported = 0;
+      for(let i = 1; i < lines.length; i++){
+        // CSVパース（ダブルクォート対応）
+        const cols = lines[i].match(/(".*?"|[^,]+)(?=,|$)/g) || [];
+        const parse = s => s ? s.replace(/^"|"$/g,'').replace(/""/g,'"') : '';
+        const [type, taskId, subId, titleJa, titleRu] = cols.map(parse);
+        if(!titleRu || !titleRu.trim()) continue;
+        if(type === 'task'){
+          const task = tasks.find(t => String(t.id) === taskId);
+          if(task){ task.title_ru = titleRu.trim(); imported++; }
+        } else if(type === 'sub'){
+          const task = tasks.find(t => String(t.id) === taskId);
+          if(task){
+            const sub = (task.subtasks||[]).find(s => String(s.id) === subId);
+            if(sub){ sub.title_ru = titleRu.trim(); imported++; }
+          }
+        }
+      }
+      save();
+      render();
+      input.value = '';
+      setTimeout(()=>{
+        const msg = document.createElement('div');
+        msg.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#10B981;color:#fff;padding:12px 24px;border-radius:10px;font-weight:700;font-size:14px;z-index:9000;box-shadow:0 4px 16px rgba(16,185,129,0.4);';
+        msg.textContent = t('trans_imp_ok') + '（' + imported + '件）';
+        document.body.appendChild(msg);
+        setTimeout(()=>msg.remove(), 2500);
+      }, 100);
+    } catch(err) {
+      alert('インポートエラー: ' + err.message);
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+// 担当者翻訳管理
+function buildAssigneeTransRows(){
+  // localStorageのカスタム担当者マップを読み込む
+  let customMap = {};
+  try { customMap = JSON.parse(localStorage.getItem('gohankojo-assignee-ru')||'{}'); } catch(e){}
+
+  // 全タスクから担当者を抽出（ユニーク）
+  const allAssigneeSet = new Set();
+  tasks.forEach(t => {
+    if(t.assignee) t.assignee.split(/[/／、,]/).map(s=>s.trim()).filter(Boolean).forEach(a => allAssigneeSet.add(a));
+  });
+
+  return [...allAssigneeSet].sort().map(ja => {
+    // ASSIGNEE_MAPにある場合はそのruを使用
+    const inMap = ASSIGNEE_MAP[ja];
+    const ruVal = inMap ? (inMap.ru || '') : (customMap[ja] || '');
+    const isTrans = !!ruVal;
+    const isBuiltin = !!inMap;
+    return `<tr style="border-bottom:1px solid var(--border-light);">
+      <td style="padding:9px 12px;font-size:13px;color:var(--text);">${esc(ja)}${isBuiltin?'<span style="font-size:10px;color:var(--muted);margin-left:6px;">（登録済）</span>':''}</td>
+      <td style="padding:9px 12px;">
+        ${isBuiltin
+          ? `<span style="font-size:13px;color:var(--low);font-weight:600;">${esc(ruVal)}</span>`
+          : `<input type="text" value="${ea(ruVal)}" placeholder="Введите имя на русском..."
+              style="width:100%;padding:6px 9px;border:1px solid ${isTrans?'var(--low)':'#CBD5E1'};border-radius:6px;font-size:13px;font-family:inherit;background:var(--surface);color:var(--text);outline:none;"
+              oninput="updateAssigneeRu('${ea(ja)}', this.value)"
+              onfocus="this.style.borderColor='var(--primary)'"
+              onblur="this.style.borderColor=this.value?'var(--low)':'#CBD5E1'">`
+        }
+      </td>
+      <td style="padding:9px 12px;text-align:center;">${isTrans?'<span style="color:var(--low);font-weight:700;">✓</span>':'<span style="color:var(--muted);">—</span>'}</td>
+    </tr>`;
+  }).join('');
+}
+
+const assigneeBuffer = {};
+function updateAssigneeRu(ja, ru){
+  assigneeBuffer[ja] = ru;
+}
+function addAssigneeMap(){
+  const ja = (document.getElementById('new-assignee-ja')?.value||'').trim();
+  const ru = (document.getElementById('new-assignee-ru')?.value||'').trim();
+  if(!ja||!ru){ alert('日本語とロシア語の両方を入力してください'); return; }
+  assigneeBuffer[ja] = ru;
+  saveAssigneeMap();
+  render();
+}
+function saveAssigneeMap(){
+  let customMap = {};
+  try { customMap = JSON.parse(localStorage.getItem('gohankojo-assignee-ru')||'{}'); } catch(e){}
+  Object.assign(customMap, assigneeBuffer);
+  Object.keys(assigneeBuffer).forEach(k => delete assigneeBuffer[k]);
+  localStorage.setItem('gohankojo-assignee-ru', JSON.stringify(customMap));
+}
+
+// ═══════════════════════════════════════
+// 新機能③ 週次サマリービュー
+// ═══════════════════════════════════════
+function buildWeekly(){
+  const today=new Date();today.setHours(0,0,0,0);
+  const weekEnd=new Date(today);weekEnd.setDate(weekEnd.getDate()+7);
+  const mondayStart=new Date(today);
+  const dow=today.getDay()||7;
+  mondayStart.setDate(today.getDate()-(dow-1));
+  const sundayEnd=new Date(mondayStart);sundayEnd.setDate(mondayStart.getDate()+6);
+
+  const dueSoon  =tasks.filter(t=>t.progress<100&&pd(t.end)>=today&&pd(t.end)<=weekEnd);
+  const overdue  =tasks.filter(t=>t.progress<100&&pd(t.end)<today);
+  const doneWeek =tasks.filter(t=>t.progress===100&&pd(t.end)>=mondayStart&&pd(t.end)<=sundayEnd);
+  const byAssign ={}; tasks.forEach(t=>{
+    if(t.progress===100)return;
+    const a=t.assignee||'未設定';
+    if(!byAssign[a])byAssign[a]=[];
+    byAssign[a].push(t);
+  });
+
+  const mkCard=(title,color,icon,list)=>`<div class="wk-card">
+    <div class="wk-card-hdr" style="color:${color}">${icon} ${title} <span style="font-size:12px;font-weight:600;color:var(--muted);margin-left:auto">${list.length}件</span></div>
+    <div class="wk-card-body">
+      ${list.length?list.map(tk=>`<div class="wk-item" onclick="openModal(${tk.id})">
+        <div class="wk-dot" style="background:${tk.color}"></div>
+        <span class="wk-name">${esc(taskTitle(tk))}</span>
+        <span class="wk-date">${tk.end}</span>
+        <span class="pbadge ${pclass(tk.priority)}">${plabel(tk.priority)}</span>
+      </div>`).join(''):`<div class="wk-empty">${t('wk_none')}</div>`}
+    </div>
+  </div>`;
+
+  const assigneeCards=Object.entries(byAssign).sort((x,y)=>y[1].length-x[1].length).map(([a,tks])=>`<div class="wk-card">
+    <div class="wk-card-hdr" style="color:var(--primary)">👤 ${esc(taskAssignee({assignee:a}))} <span style="font-size:12px;font-weight:600;color:var(--muted);margin-left:auto">${tks.length}件</span></div>
+    <div class="wk-card-body">
+      ${tks.slice(0,5).map(tk=>`<div class="wk-item" onclick="openModal(${tk.id})">
+        <div class="wk-dot" style="background:${tk.color}"></div>
+        <span class="wk-name">${esc(taskTitle(tk))}</span>
+        <span class="pbadge ${pclass(tk.priority)}">${plabel(tk.priority)}</span>
+      </div>`).join('')}
+      ${tks.length>5?`<div style="font-size:11px;color:var(--muted);padding:6px 0">+${tks.length-5}件</div>`:''}
+    </div>
+  </div>`).join('');
+
+  return`<div class="wk-view">
+    <div>
+      <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:20px">${t('wk_title')}</div>
+      <div class="wk-grid" style="margin-bottom:24px">
+        ${mkCard(t('wk_due'),'#F59E0B','📅',dueSoon)}
+        ${mkCard(t('wk_od'),'#EF4444','🚨',overdue)}
+        ${mkCard(t('wk_comp'),'#10B981','✅',doneWeek)}
+      </div>
+      <div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:12px">👤 ${t('v_assignee')} 別タスク</div>
+      <div class="wk-grid">${assigneeCards||`<div class="wk-empty">${t('wk_none')}</div>`}</div>
+    </div>
+  </div>`;
+}
+
+function toggleDarkMode(){
+  st.darkMode = !st.darkMode;
+  localStorage.setItem('gohankojo-dark', st.darkMode ? '1' : '0');
+  applyDarkMode();
+  render();
+}
+function applyDarkMode(){
+  if(st.darkMode){
+    document.body.classList.add('dark-mode');
+  } else {
+    document.body.classList.remove('dark-mode');
+  }
+}
+
+function formatMonth(d) {
+  if(st.lang === 'ja') return (d.getMonth()+1) + '月';
+  const en = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const ru = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+  return st.lang === 'en' ? en[d.getMonth()] : ru[d.getMonth()];
+}
+
+// ═══════════════════════════════════════
+// サブタスク一括開閉
+// ═══════════════════════════════════════
+function collapseAll(){
+  st.allExpanded = false;
+  tasks.forEach(t => t.exp = false);
+  save(); render();
+}
+function expandAll(){
+  st.allExpanded = true;
+  tasks.filter(t => t.subtasks.length > 0).forEach(t => t.exp = true);
+  save(); render();
+}
+function toggleAllExp(){
+  if(st.allExpanded) collapseAll(); else expandAll();
+}
+
+// ═══════════════════════════════════════
+// ソート
+// ═══════════════════════════════════════
+const PRIORITY_ORDER = {urgent:0, high:1, medium:2, low:3};
+function setSortOrder(order){
+  st.sortOrder = st.sortOrder === order ? null : order;
+  render();
+}
+function getSortedTasks(){
+  if(!st.sortOrder) return [...tasks];
+  const arr = [...tasks];
+  if(st.sortOrder === 'start')
+    return arr.sort((a,b) => a.start.localeCompare(b.start));
+  if(st.sortOrder === 'priority')
+    return arr.sort((a,b) => (PRIORITY_ORDER[a.priority]??9) - (PRIORITY_ORDER[b.priority]??9));
+  if(st.sortOrder === 'progress')
+    return arr.sort((a,b) => a.progress - b.progress);
+  return arr;
+}
+
+// ═══════════════════════════════════════
+// ドラッグ＆ドロップ
+// ═══════════════════════════════════════
+function onDragStart(e, idx){
+  st.dragIndex = idx;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', idx);
+  setTimeout(()=>render(), 0);
+}
+function onDragOver(e, idx){
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  if(st.dragOverIndex !== idx){ st.dragOverIndex = idx; render(); }
+}
+function onDragLeave(e){
+  // 何もしない（チラつき防止）
+}
+function onDrop(e, idx){
+  e.preventDefault();
+  const from = st.dragIndex;
+  const to = idx;
+  if(from !== null && from !== to){
+    const arr = [...tasks];
+    const [moved] = arr.splice(from, 1);
+    arr.splice(to, 0, moved);
+    tasks.length = 0;
+    arr.forEach(t => tasks.push(t));
+    save();
+  }
+  st.dragIndex = null;
+  st.dragOverIndex = null;
+  render();
+}
+function onDragEnd(){
+  st.dragIndex = null;
+  st.dragOverIndex = null;
+  render();
+}
+
+function filteredTasks(){
+  return getSortedTasks().filter(t=>{
+    if(st.ff!=='all'&&t.factory!==st.ff)return false;
+    if(st.fp!=='all'&&t.priority!==st.fp)return false;
+    if(st.ft!=='all'&&!t.tags.includes(st.ft))return false;
+    if(st.fs==='done'&&t.progress!==100)return false;
+    if(st.fs==='active'&&t.progress===100)return false;
+    // 担当者フィルター（jaベースのassigneeで部分一致）
+    if(st.fa!=='all'&&!t.assignee.includes(st.fa))return false;
+    return true;
+  });
+}
+// 全担当者リスト（ユニーク・ja名）
+function allAssignees(){
+  const s=new Set();
+  tasks.forEach(t=>{
+    if(!t.assignee)return;
+    // "A / B" や "A/B" を分割して個別に登録
+    t.assignee.split(/[/／、,・]/).map(a=>a.trim()).filter(Boolean).forEach(a=>s.add(a));
+  });
+  return [...s].sort();
+}
+// allTagsはja内部キーを返す（サイドバー表示は別途翻訳）
+function allTags(){const s=new Set();tasks.forEach(t=>t.tags.forEach(g=>s.add(g)));return[...s];}
+// tagsの表示名（現在言語）を返す
+function tagLabel(jaTag){
+  const ruMap={'品質':'Качество','生産':'Производство','設備':'Оборудование','管理':'Управление','改善':'Улучшение','購入':'Закупка','工程':'Процесс','安全':'Безопасность','組織':'Организация','技術':'Технология'};
+  if(st.lang==='ru') return ruMap[jaTag] || jaTag;
+  return jaTag;
+}
+function getStats(){
+  const ft = filteredTasks(); 
+  if(!ft.length)return{total:0,done:0,active:0,overdue:0,avg:0};
+  const today=new Date();today.setHours(0,0,0,0);
+  const done=ft.filter(t=>t.progress===100).length;
+  return{total:ft.length,done,active:ft.length-done,
+    overdue:ft.filter(t=>pd(t.end)<today&&t.progress<100).length,
+    avg:Math.round(ft.reduce((s,t)=>s+t.progress,0)/ft.length)};
+}
+
+// ═══════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════
+function render(){
+  const gc = document.getElementById('gc');
+  if(gc) { scrollState.gcTop = gc.scrollTop; scrollState.gcLeft = gc.scrollLeft; }
+  const lv = document.querySelector('.lv');
+  if(lv) scrollState.lvTop = lv.scrollTop;
+  const sbar = document.querySelector('.sbar');
+  if(sbar) scrollState.sbarTop = sbar.scrollTop;
+  const modal = document.querySelector('.mbody'); 
+  if(modal) scrollState.modalTop = modal.scrollTop;
+
+  document.getElementById('app').innerHTML=buildApp();
+  applyDarkMode();
+  bindEvents();
+  document.onkeydown=e=>{if(e.key==='Escape'&&st.modal)closeModal();};
+
+  const newGc = document.getElementById('gc');
+  if(newGc) newGc.scrollTop = scrollState.gcTop; 
+  const newLv = document.querySelector('.lv');
+  if(newLv) newLv.scrollTop = scrollState.lvTop;
+  const newSbar = document.querySelector('.sbar');
+  if(newSbar) newSbar.scrollTop = scrollState.sbarTop;
+  const newModal = document.querySelector('.mbody');
+  if(newModal) newModal.scrollTop = scrollState.modalTop;
+}
+
+function bindEvents(){
+  const gc=document.getElementById('gc');
+  if(gc){
+    if (scrollState.gcLeft !== -1) {
+      gc.scrollLeft = scrollState.gcLeft;
+    } else {
+      const today=new Date();today.setHours(0,0,0,0);
+      const off=dayDiff(new Date(GANTT_START),today);
+      if(off>4) gc.scrollLeft=Math.max(0,(off-4)*DAY_W);
+      scrollState.gcLeft = gc.scrollLeft;
+    }
+  }
+  // ⑤ モバイル: キーボード表示時にモーダルを縮める
+  if(window.innerWidth<=768 && window.visualViewport){
+    window.visualViewport.onresize = ()=>{
+      const modal = document.querySelector('.modal');
+      const mbody = document.querySelector('.mbody');
+      if(!modal||!mbody) return;
+      const vvh = window.visualViewport.height;
+      const wh = window.innerHeight;
+      const kbH = wh - vvh; // キーボードの高さ
+      if(kbH > 100){
+        // キーボードが出ている → モーダルを縮める
+        modal.style.maxHeight = (vvh * 0.95) + 'px';
+        mbody.style.maxHeight = (vvh * 0.95 - 116) + 'px';
+        // モーダルをビューポート内に収める
+        modal.style.bottom = '0';
+      } else {
+        modal.style.maxHeight = '';
+        mbody.style.maxHeight = '';
+      }
+    };
+  }
+}
+
+// ═══════════════════════════════════════
+// BUILD APP
+// ═══════════════════════════════════════
+function buildApp(){
+  const stats=getStats();
+  return`
+  <header class="hdr">
+    <button class="mob-menu-btn" onclick="toggleMobMenu()" title="メニュー">☰</button>
+    <div class="logo"><span>🏭</span> ${t('app_title')} <small>${t('app_sub')}</small></div>
+    <div class="vtabs">
+      <button class="vtab${st.view==='gantt'?' on':''}" onclick="setView('gantt')">${t('t_gantt')}</button>
+      <button class="vtab${st.view==='list'?' on':''}" onclick="setView('list')">${t('t_list')}</button>
+      <button class="vtab${st.view==='week'?' on':''}" onclick="setView('week')">${t('t_week')}</button>
+      <button class="vtab${st.view==='dash'?' on':''}" onclick="setView('dash')">${t('t_dash')}</button>
+      ${authRole==='admin'?`<button class="vtab${st.view==='trans'?' on':''}" onclick="setView('trans')">${t('t_trans')}</button>`:''}
+    </div>
+    <div class="hdr-right">
+
+      <div class="hdr-lang" style="display:flex;gap:3px;background:var(--border);border-radius:8px;padding:3px;">
+        <button onclick="setLang('ja')" title="日本語"
+          style="font-size:11px;font-weight:800;padding:4px 9px;border:none;border-radius:5px;cursor:pointer;transition:all .2s;
+            background:${st.lang==='ja'?'var(--primary)':'transparent'};
+            color:${st.lang==='ja'?'#fff':'var(--text-2)'};
+            box-shadow:${st.lang==='ja'?'0 1px 4px rgba(59,130,246,0.4)':'none'};">JP</button>
+        <button onclick="setLang('ru')" title="Русский"
+          style="font-size:11px;font-weight:800;padding:4px 9px;border:none;border-radius:5px;cursor:pointer;transition:all .2s;
+            background:${st.lang==='ru'?'var(--primary)':'transparent'};
+            color:${st.lang==='ru'?'#fff':'var(--text-2)'};
+            box-shadow:${st.lang==='ru'?'0 1px 4px rgba(59,130,246,0.4)':'none'};">RU</button>
+      </div>
+      <button class="dark-toggle" onclick="toggleDarkMode()" title="ダークモード切替">${st.darkMode?'☀️':'🌙'}</button>
+      <button class="btn-ghost export-btn" onclick="window.print()" title="${t('pr_btn')}">🖨️</button>
+      <button class="btn-ghost" onclick="openImport()" title="${t('imp')}">📥</button>
+      <button class="btn-ghost export-btn" onclick="openExport()" title="${t('exp')}">📤</button>
+      ${window.innerWidth>768&&authRole==='admin'?`<button class="btn-p" onclick="openModal(null)">${t('new')}</button>`:''}
+    </div>
+  </header>
+  ${window.innerWidth<=768&&authRole==='admin'?`<button onclick="openModal(null)" style="position:fixed;bottom:68px;right:16px;z-index:150;width:56px;height:56px;border-radius:50%;background:var(--primary);color:#fff;border:none;font-size:28px;cursor:pointer;box-shadow:0 4px 20px rgba(59,130,246,0.55);display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;">＋</button>`:''}
+  <div class="sbar-overlay" id="sbar-overlay" onclick="closeMobSidebar()"></div>
+  ${buildStats(stats)}
+  ${buildAlertBanner()}
+  ${buildMobNav()}
+  ${buildAssigneeFilter()}
+  <div class="main">
+    ${buildSidebar(stats)}
+    <div class="content">
+      ${st.view==='gantt'?buildGantt():st.view==='week'?buildWeekly():st.view==='trans'?buildTransManager():st.view==='dash'?buildDashboard():buildList()}
+    </div>
+  </div>
+  ${buildModal()}`;
+}
+
+function buildStats(s){
+  const pc=s.avg>=80?'var(--low)':s.avg>=40?'var(--medium)':'var(--primary)';
+  const isMob=window.innerWidth<=768;
+  const toggleBtn=isMob?`<button class="statsbar-toggle" onclick="event.stopPropagation();st.statsCollapsed=!st.statsCollapsed;render()" title="${st.statsCollapsed?'展開':'閉じる'}">${st.statsCollapsed?'▼':'▲'}</button>`:'';
+
+  // モバイル折りたたみ時のミニ表示
+  const miniView=`<div class="statsbar-mini">
+    <span style="font-size:12px;font-weight:700;color:var(--text-2)">${t('s_tot')} <strong style="color:var(--text)">${s.total}</strong></span>
+    <span style="font-size:12px;font-weight:700;color:var(--text-2)">${t('s_done')} <strong style="color:var(--low)">${s.done}</strong></span>
+    ${s.overdue?`<span style="font-size:12px;font-weight:700;color:var(--high)">⚠ ${s.overdue}</span>`:''}
+    <span style="font-size:12px;font-weight:800;color:${pc};margin-left:auto">${s.avg}%</span>
+  </div>`;
+
+  // PC: 左・中・右の3グループレイアウト
+  const pcLayout=`
+    <div class="stats-left">
+      <div class="stat"><span>${t('s_tot')}</span><strong>${s.total}</strong></div>
+      <div class="stat"><span>${t('s_done')}</span><strong style="color:var(--low)">${s.done}</strong></div>
+      <div class="stat"><span>${t('s_act')}</span><strong>${s.active}</strong></div>
+      <div class="stat" style="border-right:none;"><span>${t('s_od')}</span><strong style="color:${s.overdue?'var(--high)':'var(--text)'}">${s.overdue}</strong></div>
+    </div>
+    <div class="stats-center">
+      <span style="font-size:11px;font-weight:700;color:var(--text-2);white-space:nowrap;">${t('sort_lbl')}</span>
+      <button class="sort-btn${st.sortOrder==='start'?' on':''}" onclick="setSortOrder('start')">${t('sort_date')}</button>
+      <button class="sort-btn${st.sortOrder==='priority'?' on':''}" onclick="setSortOrder('priority')">${t('sort_pri')}</button>
+      <button class="sort-btn${st.sortOrder==='progress'?' on':''}" onclick="setSortOrder('progress')">${t('sort_prog')}</button>
+      ${st.sortOrder?`<button class="sort-btn" onclick="setSortOrder(null)" style="padding:3px 8px;">${t('sort_reset')}</button>`:''}
+    </div>
+    <div class="stats-right">
+      <span style="font-size:11px;font-weight:600;color:var(--text-2);white-space:nowrap;">${t('s_prog')}</span>
+      <div class="obar"><div class="obar-fill" style="width:${s.avg}%;background:${pc}"></div></div>
+      <strong style="font-size:15px;font-weight:800;color:${pc}">${s.avg}%</strong>
+    </div>`;
+
+  // モバイル: 折りたたみ内に全内容
+  const mobLayout=`
+    <div class="statsbar-inner" onclick="event.stopPropagation()">
+      <div class="stat"><span>${t('s_tot')}</span><strong>${s.total}</strong></div>
+      <div class="stat"><span>${t('s_done')}</span><strong style="color:var(--low)">${s.done}</strong></div>
+      <div class="stat"><span>${t('s_act')}</span><strong>${s.active}</strong></div>
+      <div class="stat"><span>${t('s_od')}</span><strong style="color:${s.overdue?'var(--high)':'var(--text)'}">${s.overdue}</strong></div>
+      <div style="width:100%;display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding-top:2px;">
+        <span style="font-size:11px;font-weight:700;color:var(--text-2);">${t('sort_lbl')}</span>
+        <button class="sort-btn${st.sortOrder==='start'?' on':''}" onclick="setSortOrder('start')">${t('sort_date')}</button>
+        <button class="sort-btn${st.sortOrder==='priority'?' on':''}" onclick="setSortOrder('priority')">${t('sort_pri')}</button>
+        <button class="sort-btn${st.sortOrder==='progress'?' on':''}" onclick="setSortOrder('progress')">${t('sort_prog')}</button>
+        ${st.sortOrder?`<button class="sort-btn" onclick="setSortOrder(null)" style="padding:3px 6px;">${t('sort_reset')}</button>`:''}
+      </div>
+      <div class="stat obar-wrap" style="margin-left:0;width:100%;padding-left:0;">
+        <span>${t('s_prog')}</span>
+        <div class="obar" style="flex:1;"><div class="obar-fill" style="width:${s.avg}%;background:${pc}"></div></div>
+        <strong style="color:${pc}">${s.avg}%</strong>
+      </div>
+    </div>`;
+
+  return`<div class="statsbar${st.statsCollapsed?' collapsed':''}" ${isMob?`onclick="st.statsCollapsed=!st.statsCollapsed;render()"`:''}>
+    ${isMob ? miniView : ''}
+    ${isMob ? mobLayout : pcLayout}
+    ${toggleBtn}
+  </div>`;
+}
+
+function buildSidebar(stats){
+  const tags=allTags();
+  const cnt=(k,v)=>k==='fp'?tasks.filter(t=>t.priority===v).length:k==='ff'?tasks.filter(t=>t.factory===v).length:tasks.filter(t=>t.tags.includes(v)).length;
+  
+  return`<aside class="sbar">
+    <div>
+      <div class="sbar-title">${t('f_lbl')}</div>
+      <button class="fi${st.ff==='all'?' on':''}" onclick="setFF('all')">${t('f_all')}<span class="fi-c">${tasks.length}</span></button>
+      <button class="fi${st.ff==='合板工場'?' on':''}" onclick="setFF('合板工場')">${t('f_ply')}<span class="fi-c">${cnt('ff','合板工場')}</span></button>
+      <button class="fi${st.ff==='単板工場'?' on':''}" onclick="setFF('単板工場')">${t('f_ven')}<span class="fi-c">${cnt('ff','単板工場')}</span></button>
+    </div>
+    <div>
+      <div class="sbar-title">${t('st_lbl')}</div>
+      <button class="fi${st.fs==='all'?' on':''}" onclick="setFS('all')">${t('f_all')}<span class="fi-c">${tasks.length}</span></button>
+      <button class="fi${st.fs==='active'?' on':''}" onclick="setFS('active')">${t('st_act')}<span class="fi-c">${tasks.filter(t=>t.progress<100).length}</span></button>
+      <button class="fi${st.fs==='done'?' on':''}" onclick="setFS('done')">${t('st_done')}<span class="fi-c">${tasks.filter(t=>t.progress===100).length}</span></button>
+    </div>
+    <div>
+      <div class="sbar-title">${t('p_lbl')}</div>
+      <button class="fi${st.fp==='all'?' on':''}" onclick="setFP('all')">${t('f_all')}</button>
+      <button class="fi${st.fp==='urgent'?' on':''}" onclick="setFP('urgent')"><span class="pdot" style="background:var(--urgent)"></span>${t('p_u')}<span class="fi-c">${cnt('fp','urgent')}</span></button>
+      <button class="fi${st.fp==='high'?' on':''}" onclick="setFP('high')"><span class="pdot" style="background:var(--high)"></span>${t('p_h')}<span class="fi-c">${cnt('fp','high')}</span></button>
+      <button class="fi${st.fp==='medium'?' on':''}" onclick="setFP('medium')"><span class="pdot" style="background:var(--medium)"></span>${t('p_m')}<span class="fi-c">${cnt('fp','medium')}</span></button>
+      <button class="fi${st.fp==='low'?' on':''}" onclick="setFP('low')"><span class="pdot" style="background:var(--low)"></span>${t('p_l')}<span class="fi-c">${cnt('fp','low')}</span></button>
+    </div>
+    <div>
+      <div class="sbar-title">${t('tag_lbl')}</div>
+      <button class="fi${st.ft==='all'?' on':''}" onclick="setFT('all')">${t('f_all')}</button>
+      ${tags.map(tag=>`<button class="fi${st.ft===tag?' on':''}" onclick="setFT('${ea(tag)}')">🏷 ${esc(tagLabel(tag))}<span class="fi-c">${cnt('ft',tag)}</span></button>`).join('')}
+    </div>
+    ${window.innerWidth<=768?`
+    <div style="margin-top:auto;padding:12px 0 0;border-top:1px solid var(--border);">
+      <div class="sbar-title">${st.lang==='ru'?'Язык':'言語'}</div>
+      <div style="display:flex;gap:6px;padding:4px 0;">
+        <button onclick="setLang('ja');closeMobSidebar();" style="flex:1;padding:8px;border:2px solid ${st.lang==='ja'?'var(--primary)':'var(--border)'};border-radius:8px;background:${st.lang==='ja'?'var(--primary-bg)':'var(--surface)'};color:${st.lang==='ja'?'var(--primary)':'var(--text-2)'};font-weight:800;font-size:13px;cursor:pointer;">🇯🇵 JP</button>
+        <button onclick="setLang('ru');closeMobSidebar();" style="flex:1;padding:8px;border:2px solid ${st.lang==='ru'?'var(--primary)':'var(--border)'};border-radius:8px;background:${st.lang==='ru'?'var(--primary-bg)':'var(--surface)'};color:${st.lang==='ru'?'var(--primary)':'var(--text-2)'};font-weight:800;font-size:13px;cursor:pointer;">🇷🇺 RU</button>
+      </div>
+    </div>`:''}
+  </aside>`;
+}
+
+// ═══════════════════════════════════════
+// GANTT
+// ═══════════════════════════════════════
+function buildGantt(){
+  const ft=filteredTasks();
+  const today=new Date();today.setHours(0,0,0,0);
+  const todayOff=dayDiff(new Date(GANTT_START),today);
+
+  // タスクの最終日を計算して表示日数を動的に決定（最低TOTAL_DAYS、今日+7日も確保）
+  let maxOff = TOTAL_DAYS;
+  for(const task of ft){
+    const endOff = dayOff(task.end) + 1;
+    if(endOff > maxOff) maxOff = endOff;
+    for(const sub of (task.subtasks||[])){
+      const sOff = dayOff(sub.end) + 1;
+      if(sOff > maxOff) maxOff = sOff;
+    }
+  }
+  // 今日+7日も確保、右余白として+5日追加
+  maxOff = Math.max(maxOff, todayOff + 7) + 5;
+  const dynDays = maxOff;
+  const totalW=dynDays*DAY_W;
+
+  const months=[];
+  let cur=new Date(GANTT_START),prevM=-1,mStart=0;
+  for(let i=0;i<dynDays;i++){
+    const m=cur.getMonth();
+    if(m!==prevM){if(prevM!==-1)months[months.length-1].days=i-mStart;months.push({label:formatMonth(cur),days:0});mStart=i;prevM=m;}
+    cur.setDate(cur.getDate()+1);
+  }
+  if(months.length)months[months.length-1].days=dynDays-mStart;
+
+  const days=[];
+  for(let i=0;i<dynDays;i++){
+    const d=new Date(GANTT_START);d.setDate(d.getDate()+i);
+    const dow=d.getDay();
+    days.push({n:d.getDate(),isW:dow===0||dow===6,isT:i===todayOff,off:i});
+  }
+
+  const bgCols=days.map(d=>`<div class="dcol${d.isW?' wknd':''}" style="left:${d.off*DAY_W}px;width:${DAY_W}px"></div>`).join('');
+  const todayLine=(todayOff>=0&&todayOff<dynDays)?`<div class="today-vline" style="left:${todayOff*DAY_W+DAY_W/2}px"></div>`:'';
+  const monthCells=months.map(m=>`<div class="g-month" style="width:${m.days*DAY_W}px">${m.label}</div>`).join('');
+  const dayCells=days.map(d=>`<div class="gday${d.isT?' today-h':''}${d.isW&&!d.isT?' wknd-h':''}" style="width:${DAY_W}px">${d.n}</div>`).join('');
+
+  let rowsHTML='';
+  if(!ft.length) rowsHTML=`<div class="empty" style="height:200px"><div class="empty-icon">📭</div><p>${t('gc_emp')}</p></div>`;
+
+  for(const task of ft){
+    const tOff=dayOff(task.start);
+    const tDur=Math.max(dayDiff(pd(task.start),pd(task.end))+1,1);
+    const barL=tOff*DAY_W, barW=tDur*DAY_W;
+    const fillW=Math.round(task.progress/100*barW);
+    const od=isOD(task);
+
+    const ttl=taskTitle(task);
+    const isDone = task.progress === 100;
+    const nameCell=`<div class="g-name" onclick="openModal(${task.id})">
+      ${authRole==='admin'&&!st.sortOrder?`<span class="drag-handle" onclick="event.stopPropagation()" title="ドラッグして並び替え">⠿</span>`:''}
+      <button class="exp-btn" onclick="event.stopPropagation();toggleExp(${task.id})">${task.subtasks.length?(task.exp?'▼':'▶'):''}</button>
+      <div class="tname-wrap">
+        <span class="tname" title="${ea(ttl)}" >${esc(ttl)}${getAttachments(task.id).length?` <span style="font-size:10px;color:var(--primary)">📎${getAttachments(task.id).length}</span>`:''}</span>
+        <span style="font-size:10px; color:var(--text-2);">${esc(tFac(task.factory))} / ${esc(taskAssignee(task))}</span>
+      </div>
+      ${isDone?`<span style="font-size:9px;font-weight:800;padding:2px 6px;background:#10B981;color:#fff;border-radius:4px;white-space:nowrap;box-shadow:0 1px 3px rgba(16,185,129,0.4);">✅ ${t('st_done').replace('✅ ','')}</span>`:od?`<span style="font-size:9px;color:var(--high);font-weight:800;padding:2px 4px;background:var(--high-bg);border-radius:4px;">${t('gc_od')}</span>`:''}
+      ${!isDone?`<span class="pbadge ${pclass(task.priority)}">${plabel(task.priority)}</span>`:''}
+    </div>`;
+
+    // バー幅で表示モード切替（DAY_W=36px）
+    // 広い(4日以上)→バー内にタスク名+%  狭い→バー右外にタスク名、%は常にバー内右端
+    const isWide = barW >= DAY_W * 4;
+    const barCell=`<div class="g-bars-cell" style="width:${totalW}px">
+      ${bgCols}${todayLine}
+      <div style="position:absolute;left:${barL}px;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:6px;z-index:5;">
+        <div class="gbar" style="width:${barW}px;height:30px;position:relative;flex-shrink:0;" onclick="openModal(${task.id})">
+          <div style="position:absolute;inset:0;background:${task.color};opacity:.28;border-radius:6px"></div>
+          <div class="gbar-fill" style="width:${fillW}px;background:${task.color};opacity:1;border-radius:${fillW>=barW?'6px':'6px 0 0 6px'};${task.priority==='urgent'?'animation:urgentGlow 1.8s ease-in-out infinite;':''}"></div>
+          ${isWide?`<span class="gbar-lbl" style="text-shadow:0 1px 4px rgba(0,0,0,0.55);z-index:3;position:relative;">${esc(ttl)}</span>`:``}
+          <span class="gbar-pct" style="text-shadow:0 1px 4px rgba(0,0,0,0.5);z-index:3;">${task.progress}%</span>
+        </div>
+        ${!isWide?`<span style="font-size:11px;font-weight:700;color:${task.color};white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 3px rgba(0,0,0,0.15);" title="${ea(ttl)}">${esc(ttl)}</span>`:``}
+      </div>
+    </div>`;
+
+    const taskIdx = tasks.indexOf(task);
+    const isDragging = st.dragIndex === taskIdx;
+    const isDragOver = st.dragOverIndex === taskIdx && st.dragIndex !== taskIdx;
+    rowsHTML+=`<div class="g-row${task.priority==='urgent'?' urgent-row':isDone?' done-row':''}${isDragging?' dragging':''}${isDragOver?' drag-over':''}"
+      draggable="${authRole==='admin'&&!st.sortOrder?'true':'false'}"
+      ondragstart="onDragStart(event,${taskIdx})"
+      ondragover="onDragOver(event,${taskIdx})"
+      ondragleave="onDragLeave(event)"
+      ondrop="onDrop(event,${taskIdx})"
+      ondragend="onDragEnd()"
+    >${nameCell}${barCell}</div>`;
+
+    if(task.exp&&task.subtasks.length){
+      for(const sub of task.subtasks){
+        const sOff=dayOff(sub.start);
+        const sDur=Math.max(dayDiff(pd(sub.start),pd(sub.end))+1,1);
+        const sL=sOff*DAY_W,sW=sDur*DAY_W,sF=Math.round(sub.progress/100*sW);
+        const stl=subTitle(sub);
+        const subName=`<div class="g-name" style="padding-left:36px">
+          <div class="tname-wrap">
+             <span class="sub-tname" title="${ea(stl)}">└ ${esc(stl)}</span>
+          </div>
+          ${sub.done?'<span style="color:var(--low);font-size:12px;font-weight:800">✓</span>':''}
+        </div>`;
+        const subIsWide = sW >= DAY_W * 3;
+        const subStatusLabel = sub.done
+          ? `<span style="font-size:9px;font-weight:800;color:#fff;background:rgba(0,0,0,0.25);padding:1px 5px;border-radius:3px;white-space:nowrap;z-index:3;position:relative;">✓ ${st.lang==='en'?'Done':st.lang==='ru'?'Готово':'完了'}</span>`
+          : `<span style="font-size:9px;font-weight:800;color:#fff;background:rgba(0,0,0,0.18);padding:1px 5px;border-radius:3px;white-space:nowrap;z-index:3;position:relative;">${st.lang==='en'?'Active':st.lang==='ru'?'В работе':'対応中'}</span>`;
+        const subBar=`<div class="g-bars-cell" style="width:${totalW}px">
+          ${bgCols}${todayLine}
+          <div style="position:absolute;left:${sL}px;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:5px;z-index:5;">
+            <div class="gbar" style="width:${sW}px;height:22px;border-radius:4px;position:relative;flex-shrink:0;opacity:${sub.done?.75:1}">
+              <div style="position:absolute;inset:0;background:${task.color};opacity:.32;border-radius:4px"></div>
+              <div style="position:absolute;left:0;top:0;bottom:0;width:${sF}px;background:${task.color};opacity:.85;z-index:1;border-radius:4px"></div>
+              ${subIsWide ? subStatusLabel : ''}
+            </div>
+            ${!subIsWide ? `<span style="font-size:9px;font-weight:800;color:${task.color};white-space:nowrap;">${sub.done?(st.lang==='en'?'Done':st.lang==='ru'?'Готово':'完了'):(st.lang==='en'?'Active':st.lang==='ru'?'В работе':'対応中')}</span>` : ''}
+          </div>
+        </div>`;
+        rowsHTML+=`<div class="g-row sub-row">${subName}${subBar}</div>`;
+      }
+    }
+  }
+
+  return`<div class="gc" id="gc">
+    <div class="g-wrap" style="width:${NAME_W+totalW}px">
+      <div class="g-hdr-row">
+        <div class="g-corner" style="width:${NAME_W}px;height:56px;justify-content:space-between;">
+          <span>${t('gc_det')}</span>
+          <button class="collapse-all-btn" onclick="event.stopPropagation();toggleAllExp()">
+            ${st.allExpanded?t('exp_all'):t('col_all')}
+          </button>
+        </div>
+        <div class="g-timeline-hdr" style="width:${totalW}px">
+          <div class="g-months-row">${monthCells}</div>
+          <div class="g-days-row">${dayCells}</div>
+        </div>
+      </div>
+      ${rowsHTML}
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════
+// LIST VIEW
+// ═══════════════════════════════════════
+function buildList(){
+  const ft=filteredTasks();
+  if(!ft.length)return`<div class="lv"><div class="empty"><div class="empty-icon">📭</div><p>${t('gc_emp')}</p></div></div>`;
+  const active=ft.filter(t=>t.progress<100),done=ft.filter(t=>t.progress===100);
+
+  // 一括操作ツールバー
+  const bulkToolbar=authRole==='admin'?`<div style="display:flex;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;">
+    <button class="bulk-btn${st.bulkMode?' primary':''}" onclick="toggleBulkMode()">${t('bulk_mode')}</button>
+    ${st.bulkMode&&st.selectedIds.length?`
+      <span class="bulk-sep"></span>
+      <span class="bulk-count">${st.selectedIds.length} ${t('bulk_count')}</span>
+      <button class="bulk-btn" onclick="selectAllBulk()">${t('bulk_all')}</button>
+      <button class="bulk-btn" onclick="clearBulkSelect()">${t('bulk_clear')}</button>
+      <span class="bulk-sep"></span>
+      <button class="bulk-btn" onclick="bulkMarkDone()">${t('bulk_done')}</button>
+      <button class="bulk-btn" onclick="bulkMarkActive()">${t('bulk_active')}</button>
+      <button class="bulk-btn danger" onclick="bulkDelete()">${t('bulk_delete')}</button>
+    `:''}
+    ${st.bulkMode&&!st.selectedIds.length?`<span style="font-size:12px;color:var(--muted);">${st.lang==='ru'?'Нажмите на задачи для выбора':'タスクをクリックして選択'}</span>`:''}
+  </div>`:'' ;
+
+  const card=task=>{
+    const od=isOD(task),isDone=task.progress===100;
+    const ttl=taskTitle(task);
+    const tgs=taskTags(task);
+    const isSel=st.selectedIds.includes(task.id);
+    const sub=task.exp&&task.subtasks.length?`<div class="lcard-sec">
+      ${task.subtasks.map(s=>`<div class="sti">
+        <div class="stchk${s.done?' done':''}" onclick="toggleSub(${task.id},${s.id})">${s.done?'✓':''}</div>
+        <span class="sttl${s.done?' done':''}">${esc(subTitle(s))}</span>
+        <div class="st-pb"><div class="st-pbf" style="width:${s.progress}%"></div></div>
+        <span style="font-size:11px;color:var(--text-2);width:30px;text-align:right;font-weight:700">${s.progress}%</span>
+      </div>`).join('')}
+    </div>`:'';
+    const taskIdx2 = tasks.indexOf(task);
+    const isDragging2 = st.dragIndex === taskIdx2;
+    const isDragOver2 = st.dragOverIndex === taskIdx2 && st.dragIndex !== taskIdx2;
+    const isMobCard = window.innerWidth <= 768;
+    const cardClick = st.bulkMode
+      ? `onclick="toggleBulkSelect(${task.id})"`
+      : isMobCard
+        ? `onclick="openModal(${task.id})"` // モバイル: カード全体タップで編集 ①
+        : `onclick="toggleExp(${task.id})"`;
+    // モバイル用下部編集バー ①
+    const mobEditBar = isMobCard && !st.bulkMode && authRole==='admin' ? `
+      <div class="lcard-mob-edit">
+        <button class="lcard-mob-edit-btn" onclick="event.stopPropagation();toggleExp(${task.id})">
+          ${task.subtasks.length?(task.exp?'▲ 閉じる':'▼ サブタスク'):'ℹ 詳細'}
+        </button>
+        <button class="lcard-mob-edit-btn primary" onclick="event.stopPropagation();openModal(${task.id})">✏️ ${t('m_edit')}</button>
+      </div>` : '';
+    return`<div class="lcard${task.priority==='urgent'?' urgent-card':isDone?' done-card':''}${isDragging2?' dragging':''}${isDragOver2?' drag-over':''}${isSel?' selected':''}"
+      style=""
+      draggable="${authRole==='admin'&&!st.sortOrder&&!st.bulkMode&&!isMobCard?'true':'false'}"
+      ondragstart="onDragStart(event,${taskIdx2})"
+      ondragover="onDragOver(event,${taskIdx2})"
+      ondragleave="onDragLeave(event)"
+      ondrop="onDrop(event,${taskIdx2})"
+      ondragend="onDragEnd()"
+    >
+      <div class="lcard-hdr" ${cardClick}>
+        ${st.bulkMode?`<div class="lcard-chk${isSel?' checked':''}" onclick="event.stopPropagation();toggleBulkSelect(${task.id})">${isSel?'✓':''}</div>`:`<span style="font-size:10px;color:var(--muted);width:16px;flex-shrink:0;text-align:center">${task.subtasks.length?(task.exp?'▼':'▶'):''}</span>`}
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+            <span style="font-weight:800;font-size:14px;color:var(--text);word-break:break-all;line-height:1.4">${esc(ttl)}${getAttachments(task.id).length?` <span style="font-size:11px;color:var(--primary);font-weight:700">📎${getAttachments(task.id).length}</span>`:''}</span>
+            <span class="tag tag-factory">${esc(tFac(task.factory))}</span>
+            <span class="pbadge ${pclass(task.priority)}" style="flex-shrink:0">${plabel(task.priority)}</span>
+            ${tgs.map(tag=>`<span class="tag tag-cat">${esc(tag)}</span>`).join('')}
+            ${od?`<span class="tag tag-od">${t('gc_od')}</span>`:''}
+            ${isDone?`<span style="font-size:11px;padding:3px 8px;border-radius:6px;font-weight:700;background:#10B981;color:#fff;white-space:nowrap;box-shadow:0 1px 3px rgba(16,185,129,0.4);">✅ ${t('st_done').replace('✅ ','')}</span>`:''}
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="lpbar"><div class="lpbar-fill" style="width:${task.progress}%;background:${task.color}"></div></div>
+            <span class="lpct" style="color:${task.color}">${task.progress}%</span>
+            <span class="ldate">📅 ${task.start} 〜 ${task.end}</span>
+            <span class="ldate" style="margin-left:auto">👤 ${esc(taskAssignee(task))}</span>
+          </div>
+        </div>
+        ${!st.bulkMode&&!isMobCard?`<button class="btn-s" style="flex-shrink:0;margin-left:12px" onclick="event.stopPropagation();openModal(${task.id})">${t('m_edit')}</button>`:''}
+      </div>
+      ${sub}
+      ${mobEditBar}
+    </div>`;
+  };
+  let html=`<div class="lv" style="display:flex;flex-direction:column;">${bulkToolbar}<div style="flex:1;overflow-y:auto;"><div style="max-width:1000px;margin:0 auto;padding:16px;">`;
+  if(active.length){if(done.length)html+=`<div class="lsec-hdr">${t('lv_act')} (${active.length})</div>`;html+=active.map(card).join('');}
+  if(done.length){html+=`<div class="lsec-hdr" style="margin-top:24px">${t('lv_done')} (${done.length})</div>`;html+=done.map(card).join('');}
+  return html+'</div></div></div>';
+}
+
+// ═══════════════════════════════════════
+// DASHBOARD VIEW
+// ═══════════════════════════════════════
+function buildDashboard(){
+  const all = tasks;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const total = all.length;
+  const done = all.filter(t=>t.progress===100).length;
+  const overdue = all.filter(t=>pd(t.end)<today&&t.progress<100).length;
+  const avg = total ? Math.round(all.reduce((s,t_)=>s+t_.progress,0)/total) : 0;
+  const pc = avg>=80?'var(--low)':avg>=40?'var(--medium)':'var(--primary)';
+
+  // 工場別
+  const factories = ['合板工場','単板工場'];
+  const factoryRows = factories.map(f=>{
+    const ft = all.filter(t_=>t_.factory===f);
+    if(!ft.length) return '';
+    const favg = Math.round(ft.reduce((s,t_)=>s+t_.progress,0)/ft.length);
+    const fdone = ft.filter(t_=>t_.progress===100).length;
+    const fname = st.lang==='ru'?(f==='合板工場'?'Фанерный':'Шпоновый'):f;
+    const fcolor = f==='合板工場'?'var(--primary)':'var(--factory)';
+    return `<div class="db-row">
+      <span class="db-label" title="${fname}">${fname}</span>
+      <div class="db-bar-wrap"><div class="db-bar" style="width:${favg}%;background:${fcolor}"></div></div>
+      <span class="db-pct">${favg}%</span>
+      <span class="db-sub">${fdone}/${ft.length}</span>
+    </div>`;
+  }).join('');
+
+  // 優先度分布
+  const prios=[{k:'urgent',color:'var(--urgent)',label:t('p_u')},{k:'high',color:'var(--high)',label:t('p_h')},{k:'medium',color:'var(--medium)',label:t('p_m')},{k:'low',color:'var(--low)',label:t('p_l')}];
+  const prioRows = prios.map(p=>{
+    const cnt = all.filter(t_=>t_.priority===p.k).length;
+    const pct = total ? Math.round(cnt/total*100) : 0;
+    return `<div class="db-row">
+      <span class="db-label">${p.label}</span>
+      <div class="db-bar-wrap"><div class="db-bar" style="width:${pct}%;background:${p.color}"></div></div>
+      <span class="db-pct">${cnt}${st.lang==='ru'?'':'件'}</span>
+    </div>`;
+  }).join('');
+
+  // 担当者別
+  const aMap={};
+  all.forEach(t_=>{
+    if(!t_.assignee)return;
+    t_.assignee.split(/[/／、,・]/).map(a=>a.trim()).filter(Boolean).forEach(a=>{
+      if(!aMap[a])aMap[a]={total:0,done:0};
+      aMap[a].total++;
+      if(t_.progress===100)aMap[a].done++;
+    });
+  });
+  const maxCnt=Math.max(...Object.values(aMap).map(v=>v.total),1);
+  const assigneeRows=Object.entries(aMap).sort((a,b)=>b[1].total-a[1].total).map(([name,v])=>{
+    const disp=taskAssignee({assignee:name});
+    const pct=Math.round(v.total/maxCnt*100);
+    const doneRate=v.total?Math.round(v.done/v.total*100):0;
+    return `<div class="db-row">
+      <span class="db-label" title="${esc(disp)}">${esc(disp)}</span>
+      <div class="db-bar-wrap"><div class="db-bar" style="width:${pct}%;background:var(--factory)"></div></div>
+      <span class="db-pct">${v.total}${st.lang==='ru'?'':'件'}</span>
+      <span class="db-sub" style="color:${doneRate>=50?'var(--low)':'var(--muted)'}">${doneRate}%</span>
+    </div>`;
+  }).join('');
+
+  // ステータス分布（進捗帯）
+  const bands=[{label:st.lang==='ru'?'Завершено':'完了(100%)',cnt:all.filter(t_=>t_.progress===100).length,color:'var(--low)'},{label:st.lang==='ru'?'В процессе (51–99%)':'進行中(51-99%)',cnt:all.filter(t_=>t_.progress>=51&&t_.progress<100).length,color:'var(--primary)'},{label:st.lang==='ru'?'Начато (1–50%)':'着手中(1-50%)',cnt:all.filter(t_=>t_.progress>=1&&t_.progress<51).length,color:'var(--medium)'},{label:st.lang==='ru'?'Не начато (0%)':'未着手(0%)',cnt:all.filter(t_=>t_.progress===0).length,color:'var(--muted)'}];
+  const statusRows=bands.map(b=>{
+    const pct=total?Math.round(b.cnt/total*100):0;
+    return`<div class="db-row">
+      <span class="db-label">${b.label}</span>
+      <div class="db-bar-wrap"><div class="db-bar" style="width:${pct}%;background:${b.color}"></div></div>
+      <span class="db-pct">${b.cnt}${st.lang==='ru'?'':'件'}</span>
+    </div>`;
+  }).join('');
+
+  return`<div class="db-view">
+    <div class="db-cards">
+      <div class="db-card"><div class="db-card-num">${total}</div><div class="db-card-lbl">${t('s_tot')}</div></div>
+      <div class="db-card"><div class="db-card-num" style="color:var(--low)">${done}</div><div class="db-card-lbl">${t('s_done')}</div></div>
+      <div class="db-card"><div class="db-card-num">${total-done}</div><div class="db-card-lbl">${t('s_act')}</div></div>
+      <div class="db-card"><div class="db-card-num" style="color:${overdue?'var(--high)':'var(--text)'}">${overdue}</div><div class="db-card-lbl">${t('s_od')}</div></div>
+      <div class="db-card" style="flex:2">
+        <div style="display:flex;align-items:center;gap:12px;padding:4px 0">
+          <div style="flex:1;height:14px;background:var(--border);border-radius:7px;overflow:hidden">
+            <div style="height:100%;width:${avg}%;background:${pc};border-radius:7px;transition:width .6s"></div>
+          </div>
+          <span style="font-size:28px;font-weight:800;color:${pc};flex-shrink:0">${avg}%</span>
+        </div>
+        <div class="db-card-lbl">${t('dash_completion')}</div>
+      </div>
+    </div>
+    <div class="db-panels">
+      <div class="db-panel">
+        <div class="db-panel-title">${t('dash_factory')}</div>
+        ${factoryRows||`<div style="color:var(--muted);font-size:12px">--</div>`}
+      </div>
+      <div class="db-panel">
+        <div class="db-panel-title">${t('dash_priority')}</div>
+        ${prioRows}
+      </div>
+      <div class="db-panel">
+        <div class="db-panel-title">${st.lang==='ru'?'Распределение статусов':'進捗ステータス分布'}</div>
+        ${statusRows}
+      </div>
+      <div class="db-panel" style="grid-column:span 1">
+        <div class="db-panel-title">${t('dash_assignee')}</div>
+        <div>${assigneeRows||`<div style="color:var(--muted);font-size:12px">--</div>`}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════
+// MODAL ROUTING & LOGIC
+// ═══════════════════════════════════════
+function buildModal(){
+  if(!st.modal)return'<div class="moverlay" id="moverlay"></div>';
+  if(st.modalType==='import')return buildImportModal();
+  if(st.modalType==='export')return buildExportModal();
+  return buildTaskModal();
+}
+
+function openModal(id){
+  // 閲覧者は新規作成不可、既存タスク閲覧は可
+  if(authRole==='viewer'&&!id) return;
+  st.eid=id;st.modal=true;st.modalType='task';
+  st.newSubInput='';
+  // 新規作成時は一時IDを生成（添付・コメント用）
+  if(!id) st.tempId = 'temp_' + Date.now();
+  const task=id?tasks.find(t=>t.id===id):null;
+  
+  st.form = task ? {
+    title: task.title, priority: task.priority, assignee: task.assignee,
+    start: task.start, end: task.end, tags: [...task.tags], progress: task.progress,
+    factory: task.factory || '合板工場',
+    subtasks: deep(task.subtasks || [])
+  } : {
+    title: '', priority: 'high', assignee: '', start: fd(new Date()), end: fd(new Date()), tags: [], progress: 0,
+    factory: '合板工場',
+    subtasks: []
+  };
+  render();
+  setTimeout(()=>document.getElementById('f-title')?.focus(),50);
+}
+
+function recalcFormProgress() {
+  if (st.form.subtasks && st.form.subtasks.length > 0) {
+    const doneCount = st.form.subtasks.filter(s => s.done).length;
+    st.form.progress = Math.round((doneCount / st.form.subtasks.length) * 100);
+  }
+}
+
+function addModalSub() {
+  const title = (st.newSubInput||'').trim();
+  if(!title) { document.getElementById('new-sub')?.focus(); return; }
+  st.form.subtasks.push({
+    id: Date.now(), title, progress: 0, done: false,
+    start: st.form.start || fd(new Date()), end: st.form.end || fd(new Date())
+  });
+  st.newSubInput = '';
+  recalcFormProgress();
+  render();
+  setTimeout(()=>document.getElementById('new-sub')?.focus(),50);
+}
+function toggleModalSub(idx) {
+  const s = st.form.subtasks[idx];
+  s.done = !s.done;
+  s.progress = s.done ? 100 : 0;
+  recalcFormProgress();
+  render();
+}
+function deleteModalSub(idx) {
+  st.form.subtasks.splice(idx, 1);
+  recalcFormProgress();
+  render();
+}
+function updateSubDate(idx, field, val){
+  if(st.form.subtasks[idx]) st.form.subtasks[idx][field] = val;
+}
+
+function buildTaskModal(){
+  const task=st.eid?tasks.find(t=>t.id===st.eid):null;
+  const f=st.form, isEdit=!!task;
+  const isViewer = authRole === 'viewer';
+
+  const isAutoProgress = f.subtasks && f.subtasks.length > 0;
+
+  const subItems = f.subtasks.map((s, idx)=>`<div class="mst-item" style="flex-direction:column;align-items:stretch;gap:6px;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      ${!isViewer?`<div class="stchk${s.done?' done':''}" onclick="toggleModalSub(${idx})">${s.done?'✓':''}</div>`
+      :`<div style="width:18px;height:18px;border-radius:5px;border:2px solid ${s.done?'var(--low)':'#CBD5E1'};background:${s.done?'var(--low)':'var(--surface)'};display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;flex-shrink:0">${s.done?'✓':''}</div>`}
+      <span style="font-size:13px;font-weight:500;flex:1;word-break:break-word;white-space:normal;line-height:1.4;${s.done?'text-decoration:line-through;color:var(--muted)':''}">${esc(s.title)}</span>
+      <span style="font-size:11px;padding:2px 7px;border-radius:10px;font-weight:700;background:${s.done?'var(--low-bg)':'var(--primary-bg)'};color:${s.done?'var(--low)':'var(--primary)'};flex-shrink:0;">${s.done?(t('st_done').replace('✅ ','✅')):(t('s_act'))}</span>
+      <span style="font-size:11px;color:var(--text-2);width:30px;text-align:right;font-weight:700">${s.progress}%</span>
+      ${!isViewer?`<button onclick="deleteModalSub(${idx})" class="btn-del" style="margin-left:4px;padding:4px 8px;border:none;background:transparent;color:var(--muted);font-size:14px;" title="${t('btn_del')}">✕</button>`:''}
+    </div>
+    <div style="display:flex;gap:8px;padding-left:26px;">
+      <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-2);">
+        <span style="font-weight:600;">${t('l_st')}:</span>
+        <input type="date" value="${ea(s.start||f.start||fd(new Date()))}"
+          style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-family:inherit;color-scheme:${st.darkMode?'dark':'light'};"
+          ${isViewer?'disabled':''}
+          onchange="updateSubDate(${idx},'start',this.value)">
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-2);">
+        <span style="font-weight:600;">${t('l_ed')}:</span>
+        <input type="date" value="${ea(s.end||f.end||fd(new Date()))}"
+          style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-family:inherit;color-scheme:${st.darkMode?'dark':'light'};"
+          ${isViewer?'disabled':''}
+          onchange="updateSubDate(${idx},'end',this.value)">
+      </div>
+    </div>
+  </div>`).join('');
+
+  const secOpen=k=>st.expandedSecs[k]!==false;
+
+  return`<div class="moverlay on" id="moverlay" onclick="maybeClose(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="mhdr">
+        <span class="mtitle">${isViewer?t('gc_det'):isEdit?t('m_edit'):t('m_new')}</span>
+        <button class="mclose" onclick="closeModal()">✕</button>
+      </div>
+      
+      <div class="mbody">
+        
+        <div class="fg">
+          <label class="flbl">${t('l_name')} ${!isViewer?'<span style="color:var(--high)">*</span>':''}</label>
+          <input class="fi2" id="f-title" value="${ea(f.title||'')}" placeholder="${t('ph_name')}" oninput="sf('title',this.value)" ${isViewer?'readonly style="background:var(--bg);cursor:default"':''}>
+        </div>
+
+        <div class="fg">
+          <label class="flbl">${t('l_fac')}</label>
+          <div class="radio-group">
+            <label><input type="radio" name="factory" value="合板工場" ${f.factory==='合板工場'?'checked':''} onchange="sf('factory',this.value)" ${isViewer?'disabled':''}> ${t('f_ply')}</label>
+            <label><input type="radio" name="factory" value="単板工場" ${f.factory==='単板工場'?'checked':''} onchange="sf('factory',this.value)" ${isViewer?'disabled':''}> ${t('f_ven')}</label>
+          </div>
+        </div>
+
+        <div class="frow">
+          <div class="fg">
+            <label class="flbl">${t('l_pri')}</label>
+            <select class="fsel" onchange="sf('priority',this.value)" ${isViewer?'disabled':''}>
+              <option value="urgent"${(f.priority||'high')==='urgent'?' selected':''}>${t('mh_u')}</option>
+              <option value="high"${(f.priority||'high')==='high'?' selected':''}>${t('mh_h')}</option>
+              <option value="medium"${(f.priority||'high')==='medium'?' selected':''}>${t('mh_m')}</option>
+              <option value="low"${(f.priority||'high')==='low'?' selected':''}>${t('mh_l')}</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label class="flbl">${t('l_ass')}</label>
+            <input class="fi2" value="${ea(f.assignee||'')}" placeholder="${t('ph_ass')}" oninput="sf('assignee',this.value)" ${isViewer?'readonly style="background:var(--bg);cursor:default"':''}>
+          </div>
+        </div>
+
+        <div class="frow">
+          <div class="fg">
+            <label class="flbl">${t('l_st')}</label>
+            <input class="fi2" type="date" value="${ea(f.start||fd(new Date()))}" onchange="sf('start',this.value)" ${isViewer?'disabled':''}>
+          </div>
+          <div class="fg">
+            <label class="flbl">${t('l_ed')}</label>
+            <input class="fi2" type="date" value="${ea(f.end||fd(new Date()))}" onchange="sf('end',this.value)" ${isViewer?'disabled':''}>
+          </div>
+        </div>
+
+        <div class="fg">
+          <label class="flbl">${t('l_tag')}</label>
+          <input class="fi2" value="${ea(formTagsDisplay(f))}" placeholder="${t('ph_tag')}" oninput="sf('tags',this.value.split(',').map(s=>s.trim()).filter(Boolean).map(lbl=>jaTagFromLabel(lbl)))" ${isViewer?'readonly style="background:var(--bg);cursor:default"':''}>
+        </div>
+
+        <div class="fg" style="background:var(--primary-bg);padding:16px;border-radius:10px;border:1px solid rgba(59,130,246,0.2)">
+          <label class="flbl" style="display:flex;align-items:center;color:var(--primary)">
+            ${t('l_prg')}：<span id="pv" class="pval" style="margin-left:8px">${f.progress||0}%</span>
+            ${isAutoProgress ? `<span style="font-size:10px; color:var(--text-2); font-weight:normal; margin-left:8px;">${t('l_auto')}</span>` : ''}
+          </label>
+          <div class="psld-wrap" style="margin-top:8px">
+            <input type="range" min="0" max="100" value="${f.progress||0}" ${isAutoProgress||isViewer ? 'disabled' : ''} oninput="sf('progress',+this.value);document.getElementById('pv').textContent=this.value+'%'">
+          </div>
+        </div>
+
+        <div class="msec">
+          <div class="msec-hdr" onclick="toggleSec('sub')">
+            ${t('l_sub')} ${(f.subtasks.length)?`(${f.subtasks.length})`:''}
+            <span style="margin-left:auto;font-size:11px">${secOpen('sub')?'▼':'▶'}</span>
+          </div>
+          ${secOpen('sub')?`<div class="msec-body">
+            ${subItems||`<div style="font-size:12px;color:var(--muted);padding:8px 0;text-align:center">${t('e_sub')}</div>`}
+            ${!isViewer?`<div class="add-row" style="margin-top:8px">
+              <input class="fi2" id="new-sub" placeholder="${t('ph_sub')}" value="${ea(st.newSubInput||'')}"
+                     oninput="st.newSubInput=this.value" onkeydown="if(event.key==='Enter')addModalSub()">
+              <button class="btn-s" onclick="addModalSub()">${t('btn_add')}</button>
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px">${t('hint_sub')}</div>`:''}
+          </div>`:''}
+        </div>
+        
+        ${(isEdit||st.tempId)?buildAttachmentSection(isEdit?task.id:st.tempId):''}
+        ${(isEdit||st.tempId)?buildCommentSection(isEdit?task.id:st.tempId):''}
+        <div style="height: 12px;"></div>
+      </div>
+      
+      <div class="mftr">
+        ${isEdit&&!isViewer?`<button class="btn-del" onclick="deleteTask(${task.id})">${t('btn_del')}</button>`:''}
+        <button class="btn-s" onclick="closeModal()">${isViewer?t('b_cls'):t('btn_can')}</button>
+        ${!isViewer?`<button class="btn-blue" onclick="saveTask()">${isEdit?t('btn_sav'):t('btn_cre')}</button>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+
+// -----------------------------------------------------
+// IMPORT / EXPORT
+// -----------------------------------------------------
+function buildImportModal(){
+  const prev=st.importPreview;
+  // テキストタブ用プレビュー（重複表示付き）
+  const newItems=prev.filter(r=>!r._dup);
+  const dupItems=prev.filter(r=>r._dup);
+
+  const previewHTML=prev.length?`<div class="fg" style="margin-top:16px">
+    <label class="flbl" style="margin-bottom:8px;display:block;">
+      ${st.lang==='ru'?`Новых: <strong style="color:var(--low)">${newItems.length}</strong>　Дублей: <strong style="color:var(--muted)">${dupItems.length}</strong>`
+        :`新規追加: <strong style="color:var(--low)">${newItems.length}件</strong>　重複スキップ: <strong style="color:var(--muted)">${dupItems.length}件</strong>`}
+    </label>
+    <div style="border:1px solid var(--border);border-radius:8px;max-height:260px;overflow-y:auto;background:var(--surface)">
+      ${newItems.map((r,i)=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border-light);font-size:12px">
+          <span style="width:16px;color:var(--low);font-weight:800;flex-shrink:0">＋</span>
+          <span style="flex:1;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.title)}</span>
+          <span class="pbadge ${pclass(r.priority)}">${plabel(r.priority)}</span>
+          <span style="font-size:10px;color:var(--muted);white-space:nowrap">${r.start}</span>
+        </div>`).join('')}
+      ${dupItems.map(r=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--border-light);font-size:12px;opacity:.45;">
+          <span style="width:16px;color:var(--muted);font-weight:800;flex-shrink:0">＝</span>
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:line-through">${esc(r.title)}</span>
+          <span style="font-size:10px;color:var(--muted);white-space:nowrap">${st.lang==='ru'?'дубль':'重複'}</span>
+        </div>`).join('')}
+    </div>
+  </div>`:'';
+
+  return`<div class="moverlay on" id="moverlay" onclick="maybeClose(event)">
+    <div class="modal modal-wide" onclick="event.stopPropagation()">
+      <div class="mhdr"><span class="mtitle">${t('i_tit')}</span><button class="mclose" onclick="closeModal()">✕</button></div>
+      <div class="mbody">
+        <div style="display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px;padding-bottom:4px">
+          <button class="vtab${st.importTab==='file'?' on':''}" onclick="setImportTab('file')">${t('i_fc')}</button>
+          <button class="vtab${st.importTab==='text'?' on':''}" onclick="setImportTab('text')">${t('i_tx')}</button>
+        </div>
+        ${st.importTab==='file'?`
+        <div style="background:var(--primary-bg);border:2px dashed var(--primary);border-radius:12px;padding:24px;text-align:center;cursor:pointer;" id="drop-zone">
+          <input type="file" id="fi-input" accept=".xlsx,.xls,.csv" style="display:none">
+          <div style="font-size:40px;margin-bottom:12px">📂</div>
+          <p style="font-size:14px;font-weight:800;margin-bottom:6px;color:var(--primary)">${t('i_drp')}</p>
+          <p style="font-size:12px;color:var(--text-2)">${t('i_sup')}</p>
+          <p style="font-size:11px;color:var(--primary);margin-top:8px;font-weight:700">${st.lang==='ru'?'Дубли пропускаются автоматически':'重複タスクは自動的にスキップされます'}</p>
+        </div>`:`
+        <div class="fg">
+          <label class="flbl">${t('i_lbl')}</label>
+          <textarea class="fi2" rows="6" style="font-family:monospace;resize:vertical" id="import-text"
+            placeholder="${t('i_ph')}"
+            oninput="st.importText=this.value;parseTextImport(this.value)">${esc(st.importText)}</textarea>
+        </div>`}
+        ${previewHTML}
+      </div>
+      <div class="mftr">
+        ${prev.length?`<button class="btn-s" onclick="clearImportPreview()">${t('b_clr')}</button>`:''}
+        <button class="btn-s" onclick="closeModal()">${t('btn_can')}</button>
+        ${st.importTab==='text'&&newItems.length?`<button class="btn-blue" onclick="confirmImport()">${t('b_add', newItems.length)}</button>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function buildExportModal(){
+  return`<div class="moverlay on" id="moverlay" onclick="maybeClose(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="mhdr"><span class="mtitle">${t('e_tit')}</span><button class="mclose" onclick="closeModal()">✕</button></div>
+      <div class="mbody">
+        <p style="font-size:14px;color:var(--text-2);text-align:center;margin:10px 0">${t('e_dsc', `<strong style="font-size:16px;color:var(--text)">${filteredTasks().length}</strong>`)}</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+          <button class="btn-ghost" style="flex-direction:column;padding:24px;height:auto;gap:12px" onclick="exportCSV()">
+            <div style="font-size:36px">📄</div>
+            <div style="font-weight:800;font-size:14px;color:var(--text)">${t('e_csv')}</div>
+            <div style="font-size:11px;color:var(--muted)">${t('e_c_sub')}</div>
+          </button>
+          <button class="btn-ghost" style="flex-direction:column;padding:24px;height:auto;gap:12px;border-color:var(--primary);background:var(--primary-bg)" onclick="exportExcel()">
+            <div style="font-size:36px">📊</div>
+            <div style="font-weight:800;font-size:14px;color:var(--primary)">${t('e_xls')}</div>
+            <div style="font-size:11px;color:var(--primary);opacity:0.8">${t('e_x_sub')}</div>
+          </button>
+        </div>
+      </div>
+      <div class="mftr"><button class="btn-s" onclick="closeModal()">${t('b_cls')}</button></div>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════
+// EVENT HANDLERS
+// ═══════════════════════════════════════
+function setLang(v){st.lang=v; localStorage.setItem('gohankojo-lang', v); render();}
+function setView(v){st.view=v;if(v!=='list'){st.bulkMode=false;st.selectedIds=[];}render();}
+function setFP(p){st.fp=p;render();}
+function setFT(t){st.ft=t;render();}
+function setFS(s){st.fs=s;render();}
+function setFF(f){st.ff=f;render();}
+function sf(k,v){st.form[k]=v; if(k==='factory')render();}
+function maybeClose(e){if(e.target.id==='moverlay')closeModal();}
+function toggleSec(k){st.expandedSecs[k]=!st.expandedSecs[k];render();}
+
+function toggleExp(id){const t_obj=tasks.find(tx=>tx.id===id);if(t_obj){t_obj.exp=!t_obj.exp;save();render();}}
+
+function toggleSub(tid,sid){
+  const task=tasks.find(tx=>tx.id===tid);if(!task)return;
+  const sub=task.subtasks.find(s=>s.id===sid);if(!sub)return;
+  sub.done=!sub.done;sub.progress=sub.done?100:0;
+  if(task.subtasks.length) {
+    const doneCount = task.subtasks.filter(s=>s.done).length;
+    task.progress=Math.round((doneCount / task.subtasks.length) * 100);
+  }
+  save();render();
+}
+
+// ═══════════════════════════════════════
+// 新機能⑤ 添付ファイル・リンク機能
+// ═══════════════════════════════════════
+function buildAttachmentSection(taskId){
+  const isV = authRole === 'viewer';
+  const atts = getAttachments(taskId);
+  const secOpen = st.expandedSecs['att'] !== false;
+
+  const formatSize = s => s < 1024 ? s+'B' : s < 1048576 ? (s/1024).toFixed(1)+'KB' : (s/1048576).toFixed(1)+'MB';
+
+  const items = atts.map((a, i) => {
+    const isImg = a.type === 'image';
+    const thumb = isImg
+      ? `<img class="att-thumb" src="${a.data}" onclick="openLightbox(this.src)" title="${esc(a.name)}">`
+      : `<div class="att-file-icon" onclick="window.open(${JSON.stringify(a.data)},'_blank')" title="${esc(a.name)}">🔗</div>`;
+    const openBtn = isImg
+      ? `<button class="att-open" onclick="openLightbox(${JSON.stringify(a.data)})">🔍 ${t('att_open')}</button>`
+      : `<a class="att-open" href="${ea(a.data)}" target="_blank" rel="noopener">↗ ${t('att_open')}</a>`;
+    const delBtn = !isV ? `<button class="att-del" onclick="deleteAttachment(${taskId},${i})" title="削除">✕</button>` : '';
+    return `<div class="att-item">
+      ${thumb}
+      <div class="att-info">
+        <div class="att-name" title="${esc(a.name)}">${esc(a.name)}</div>
+        <div class="att-meta">${isImg?'📷 画像':'🔗 リンク'}${a.size?' · '+formatSize(a.size):''} · ${a.date}</div>
+      </div>
+      ${openBtn}
+      ${delBtn}
+    </div>`;
+  }).join('');
+
+  const uploadArea = !isV ? `
+    <div class="att-drop-zone" id="att-drop-${taskId}"
+      ondrop="handleAttDrop(event,${taskId})"
+      ondragover="handleAttDragOver(event)"
+      ondragleave="handleAttDragLeave(event)">
+      <input type="file" accept="image/*" multiple
+        onchange="Array.from(this.files).forEach(f=>addAttachmentImage(${taskId},f))">
+      <div class="att-drop-icon">📷</div>
+      <div class="att-drop-text">${t('att_drop')}</div>
+      <div class="att-drop-sub">${t('att_drop_sub')}</div>
+    </div>
+    <div class="att-link-row" style="margin-top:8px">
+      <input class="att-link-input" id="att-link-input-${taskId}"
+        placeholder="${t('att_link_ph')}"
+        onkeydown="if(event.key==='Enter')addAttachmentLink(${taskId})">
+      <button class="att-link-btn" onclick="addAttachmentLink(${taskId})">🔗 ${t('att_link_add')}</button>
+    </div>` : '';
+
+  return `<div class="msec">
+    <div class="msec-hdr" onclick="toggleSec('att')">
+      ${t('att_title')} ${atts.length?`(${atts.length})`:''}
+      <span style="margin-left:auto;font-size:11px">${secOpen?'▼':'▶'}</span>
+    </div>
+    ${secOpen?`<div class="msec-body">
+      <div class="att-list">${items||`<div style="font-size:12px;color:var(--muted);text-align:center;padding:8px">${t('att_none')}</div>`}</div>
+      ${uploadArea}
+    </div>`:''}
+  </div>`;
+}
+
+// ═══════════════════════════════════════
+// 新機能④ コメント・メモ機能
+// ═══════════════════════════════════════
+function buildCommentSection(taskId){
+  const cms = comments[taskId] || [];
+  const secOpen = st.expandedSecs['cm'] !== false;
+  const isV = authRole === 'viewer';
+  const items = cms.map((c,i)=>`<div class="cm-item">
+    <div class="cm-text">${esc(c.text)}</div>
+    <div class="cm-meta">
+      <span>🕐 ${c.date}</span>
+      ${!isV?`<button class="cm-del" onclick="deleteComment(${taskId},${i})">✕</button>`:''}
+    </div>
+  </div>`).join('');
+  return`<div class="msec">
+    <div class="msec-hdr" onclick="toggleSec('cm')">
+      ${t('cm_title')} ${cms.length?`(${cms.length})`:''}
+      <span style="margin-left:auto;font-size:11px">${secOpen?'▼':'▶'}</span>
+    </div>
+    ${secOpen?`<div class="msec-body">
+      <div class="cm-list">${items||`<div style="font-size:12px;color:var(--muted);text-align:center;padding:8px">${t('cm_none')}</div>`}</div>
+      ${!isV?`<div class="add-row">
+        <input class="fi2" placeholder="${t('cm_ph')}" value="${ea(st.newComment||'')}"
+          oninput="st.newComment=this.value" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();addComment(${taskId});}">
+        <button class="btn-s" onclick="addComment(${taskId})">${t('cm_add')}</button>
+      </div>`:''}
+    </div>`:''}
+  </div>`;
+}
+function addComment(taskId){
+  const text=(st.newComment||'').trim();
+  if(!text)return;
+  if(!comments[taskId])comments[taskId]=[];
+  const now=new Date();
+  const date=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  comments[taskId].push({text,date});
+  saveComments();
+  st.newComment='';
+  render();
+  setTimeout(()=>document.querySelector('.cm-list')?.lastElementChild?.scrollIntoView({behavior:'smooth'}),50);
+}
+function deleteComment(taskId,idx){
+  if(!comments[taskId])return;
+  comments[taskId].splice(idx,1);
+  saveComments();
+  render();
+}
+
+function closeModal(){
+  // 新規作成キャンセル時は一時IDの添付・コメントを削除
+  if(st.tempId){
+    delete attachments[st.tempId]; saveAttachments();
+    delete comments[st.tempId]; saveComments();
+    st.tempId = null;
+  }
+  st.modal=false;st.importPreview=[];st.importText='';st.newSubInput='';render();
+}
+
+function saveTask(){
+  const f=st.form;
+  if(!String(f.title||'').trim()){alert(t('al_nam'));return;}
+  if(f.start&&f.end&&pd(f.start)>pd(f.end)){alert(t('al_dat'));return;}
+  const tags=Array.isArray(f.tags)?f.tags:String(f.tags||'').split(',').map(s=>s.trim()).filter(Boolean);
+  
+  if(st.eid){
+    const tk=tasks.find(tx=>tx.id===st.eid);
+    if(tk) Object.assign(tk,{
+      title:f.title.trim(), factory:f.factory, priority:f.priority, assignee:f.assignee,
+      start:f.start, end:f.end, tags, progress:f.progress, subtasks:f.subtasks
+    });
+  }else{
+    if(st.newSubInput.trim()){
+      f.subtasks.push({id:Date.now(),title:st.newSubInput.trim(),progress:0,done:false,start:f.start,end:f.end});
+      recalcFormProgress();
+    }
+    const newId = nextId();
+    // 一時IDの添付・コメントを正式IDに移行
+    if(st.tempId){
+      if(attachments[st.tempId]){ attachments[newId]=attachments[st.tempId]; delete attachments[st.tempId]; saveAttachments(); }
+      if(comments[st.tempId]){ comments[newId]=comments[st.tempId]; delete comments[st.tempId]; saveComments(); }
+      st.tempId = null;
+    }
+    tasks.push({
+      id:newId, title:f.title.trim(), factory:f.factory, priority:f.priority||'high', assignee:f.assignee,
+      start:f.start, end:f.end, tags, progress:f.progress||0,
+      color:taskColor(tags,tasks.length), exp:false, subtasks:f.subtasks
+    });
+  }
+  save();st.modal=false;render();
+}
+
+function _confirmDlg(msg,okLabel,onOk){
+  const el=document.createElement('div');
+  el.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;';
+  el.innerHTML=`<div style="background:var(--surface);border-radius:12px;padding:24px 24px 20px;max-width:320px;width:90%;box-shadow:0 20px 40px rgba(0,0,0,0.3);font-family:inherit;">
+    <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:20px;line-height:1.5;">${msg}</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button id="_cd_cancel" style="padding:8px 16px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text-2);font-size:13px;font-weight:600;cursor:pointer;">${t('btn_can')}</button>
+      <button id="_cd_ok" style="padding:8px 16px;border:none;border-radius:8px;background:#EF4444;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">${okLabel}</button>
+    </div>
+  </div>`;
+  document.body.appendChild(el);
+  const close=()=>document.body.removeChild(el);
+  document.getElementById('_cd_ok').onclick=()=>{close();onOk();};
+  document.getElementById('_cd_cancel').onclick=close;
+  el.addEventListener('click',e=>{if(e.target===el)close();});
+}
+function deleteTask(id){_confirmDlg(t('al_del'),t('btn_del'),()=>{tasks=tasks.filter(tx=>tx.id!==id);save();st.modal=false;render();});}
+
+// 一括操作
+function toggleBulkMode(){st.bulkMode=!st.bulkMode;if(!st.bulkMode)st.selectedIds=[];render();}
+function toggleBulkSelect(id){const i=st.selectedIds.indexOf(id);if(i>=0)st.selectedIds.splice(i,1);else st.selectedIds.push(id);render();}
+function selectAllBulk(){st.selectedIds=filteredTasks().map(t=>t.id);render();}
+function clearBulkSelect(){st.selectedIds=[];render();}
+function bulkMarkDone(){st.selectedIds.forEach(id=>{const t=tasks.find(t=>t.id===id);if(t)t.progress=100;});st.selectedIds=[];save();render();}
+function bulkMarkActive(){st.selectedIds.forEach(id=>{const t=tasks.find(t=>t.id===id);if(t&&t.progress===100)t.progress=0;});st.selectedIds=[];save();render();}
+function bulkDelete(){
+  if(!st.selectedIds.length)return;
+  const msg=st.lang==='ru'?`Удалить ${st.selectedIds.length} задач?`:`${st.selectedIds.length}件を削除しますか？`;
+  _confirmDlg(msg,t('btn_del'),()=>{tasks=tasks.filter(t=>!st.selectedIds.includes(t.id));st.selectedIds=[];save();render();});
+}
+
+function resetData(){_confirmDlg(t('al_rst'),t('btn_del'),()=>{tasks=deep(INIT_TASKS);save();render();});}
+
+function openImport(){st.modal=true;st.modalType='import';st.importTab='file';st.importPreview=[];st.importText='';render();}
+function setImportTab(tab){st.importTab=tab;st.importPreview=[];render();}
+function clearImportPreview(){st.importPreview=[];render();}
+function removeImportRow(i){
+  const grouped=getGrouped();
+  const removed=grouped[i];
+  st.importPreview=st.importPreview.filter(r=>r._tmpId!==removed._tmpId&&r._parentId!==removed._tmpId);
+  render();
+}
+function removeImportSub(pi,si){
+  const grouped=getGrouped();
+  const sub=(grouped[pi]._subs||[])[si];
+  if(sub)st.importPreview=st.importPreview.filter(r=>r!==sub);
+  render();
+}
+function getGrouped(){
+  const grouped=[];
+  for(const r of st.importPreview){
+    if(r._sub){const p=grouped.find(g=>g._tmpId===r._parentId);if(p){(p._subs=p._subs||[]).push(r);}continue;}
+    r._subs=[];grouped.push(r);
+  }
+  return grouped;
+}
+
+function handleFile(file){
+  if(!file)return;
+  const name=file.name.toLowerCase();
+  const reader=new FileReader();
+  if(name.endsWith('.csv')){reader.onload=e=>parseCSV(e.target.result);reader.readAsText(file,'UTF-8');}
+  else{reader.onload=e=>parseXLSX(e.target.result);reader.readAsArrayBuffer(file);}
+}
+function parseXLSX(buf){
+  try{
+    const wb=XLSX.read(buf,{type:'array'});
+    let bestSheet=wb.SheetNames[0],bestCount=0;
+    for(const sn of wb.SheetNames){
+      const ws=wb.Sheets[sn];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      if(rows.length>bestCount){bestCount=rows.length;bestSheet=sn;}
+    }
+    const ws=wb.Sheets[bestSheet];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    processRows(rows);
+  }catch(e){alert('Error: '+e.message);}
+}
+function parseCSV(text){
+  const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
+  const rows=lines.map(l=>l.split(',').map(s=>s.trim()));
+  processRows(rows);
+}
+function parseTextImport(text){
+  const lines=text.split('\n').map(l=>l.trim()).filter(l=>l&&!l.startsWith('#'));
+  const items=lines.map(line=>{
+    const p=line.split(',').map(s=>s.trim());
+    if(!p[0])return null;
+    const pr=p[4]||'';
+    return{title:p[0],assignee:p[1]||'',start:p[2]||fd(new Date()),end:p[3]||fd(new Date()),
+      priority:pr==='最優先'||pr==='Urgent'||pr==='Срочно'?'urgent':pr==='高'||pr==='High'||pr==='Высокий'?'high':pr==='低'||pr==='Low'||pr==='Низкий'?'low':'medium',tags:[p[5]||'タグ']};
+  }).filter(Boolean);
+  st.importPreview=groupImportItems(items);render();
+}
+function processRows(rows){
+  if(rows.length<2){st.importPreview=[];render();return;}
+  const hrow=rows[0].map(h=>String(h).toLowerCase());
+  const ci={};
+  const find=(names)=>{for(const n of names){const i=hrow.findIndex(h=>h.includes(n.toLowerCase()));if(i>=0)return i;}return -1;};
+  ci.title=find(['件名','タスク名','title','название','таск']);
+  ci.assignee=find(['担当','assignee','исполнитель']);
+  ci.start=find(['初回','開始','start','начало']);
+  ci.end=find(['最終','終了','end','конец','срок']);
+  ci.priority=find(['優先','priority','приоритет']);
+  ci.tag=find(['分類','タグ','tag','тег','категория']);
+  ci.action=find(['指示','用件','アクション','action','действие']);
+
+  const items=[];
+  for(let i=1;i<rows.length;i++){
+    const row=rows[i];
+    const get=k=>ci[k]>=0?String(row[ci[k]]||'').trim():'';
+    const title=get('title');
+    if(!title||title.length<1)continue;
+    const start=parseXDate(ci.start>=0?row[ci.start]:null)||fd(new Date());
+    const end=parseXDate(ci.end>=0?row[ci.end]:null)||start;
+    const pr=get('priority');
+    const prio=pr.includes('最優先')||pr.includes('Urgent')||pr.includes('Срочно')?'urgent':pr.includes('高')||pr.includes('High')||pr.includes('Высокий')?'high':pr.includes('低')||pr.includes('Low')||pr.includes('Низкий')?'low':'medium';
+    const tagRaw=get('tag');
+    const tags=tagRaw?tagRaw.split(/[\/,]/).map(s=>s.trim()).filter(Boolean):['その他'];
+    items.push({title,assignee:get('assignee'),start,end,priority:prio,tags,_action:get('action')});
+  }
+  st.importPreview=groupImportItems(items);
+  // ファイル読み込み後に自動実行
+  confirmImport();
+}
+function groupImportItems(items){
+  // ① インポートファイル内の重複を除去（完全一致のみ）
+  // ② 既存タスクとの重複チェック（タスク名の完全一致）
+  const result=[];
+  let tmpId=1;
+  const existingTitles = new Set(tasks.map(t=>t.title.trim()));
+  const seenTitles = new Set();
+
+  for(const item of items){
+    const title = item.title.trim();
+    if(!title) continue;
+    // 既存タスクと重複 → _dupフラグを立てて記録（プレビューに表示するため）
+    if(existingTitles.has(title)){
+      item._tmpId=tmpId++;item._dup=true;result.push(item);continue;
+    }
+    // ファイル内の重複 → スキップ
+    if(seenTitles.has(title)) continue;
+    seenTitles.add(title);
+    item._tmpId=tmpId++;
+    result.push(item);
+  }
+  return result;
+}
+function parseXDate(val){
+  if(!val)return null;
+  if(typeof val==='number'&&val>1000){try{return fd(new Date(Math.round((val-25569)*86400*1000)));}catch(e){return null;}}
+  const s=String(val);
+  if(s.match(/\d{4}[-\/]\d{1,2}[-\/]\d{1,2}/))return s.replace(/\//g,'-').slice(0,10);
+  return null;
+}
+function confirmImport(){
+  // 重複でないタスクのみ自動追加
+  const newItems = st.importPreview.filter(r=>!r._dup&&r.title);
+  const dupCount = st.importPreview.filter(r=>r._dup).length;
+  if(!newItems.length){
+    save();st.modal=false;st.importPreview=[];render();
+    setTimeout(()=>alert(t('imp_auto_none')),100);
+    return;
+  }
+  let added=0;
+  for(const r of newItems){
+    const tags=Array.isArray(r.tags)?r.tags:['その他'];
+    tasks.push({
+      id:nextId(),title:r.title.trim(),factory:'合板工場',priority:r.priority||'medium',
+      assignee:r.assignee||'',start:r.start,end:r.end,tags,progress:0,
+      color:taskColor(tags,tasks.length),exp:false,subtasks:[]
+    });
+    added++;
+  }
+  save();st.modal=false;st.importPreview=[];render();
+  setTimeout(()=>alert(t('imp_auto_done',added,dupCount)),100);
+}
+
+function openExport(){st.modal=true;st.modalType='export';render();}
+function exportCSV(){
+  const ft=filteredTasks();
+  const BOM='\uFEFF';
+  const h = st.lang === 'ja' ? 'No,タスク名,工場,分類,担当者,開始日,終了日,進捗率(%),優先度,サブタスク数,状態' : 
+            st.lang === 'en' ? 'No,Task Name,Factory,Tags,Assignee,Start Date,End Date,Progress(%),Priority,Subtasks,Status' : 
+            'No,Название,Завод,Теги,Исполнитель,Начало,Конец,Прогресс(%),Приоритет,Подзадачи,Статус';
+  const rows=ft.map((tk,i)=>{const ttl=taskTitle(tk);const tgs=taskTags(tk);return[i+1,`"${ttl.replace(/"/g,'""')}"`,`"${tFac(tk.factory)}"`,`"${tgs.join('/')}"`,
+    `"${taskAssignee(tk)}"`,tk.start,tk.end,tk.progress,plabel(tk.priority),tk.subtasks.length,
+    tk.progress===100?t('st_done').replace('✅ ',''):isOD(tk)?t('gc_od'):t('s_act')].join(',');});
+  const csv=BOM+[h,...rows].join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`TaskData_${fd(new Date())}.csv`;a.click();closeModal();
+}
+function exportExcel(){
+  if(typeof XLSX==='undefined'){alert('Loading library...');return;}
+  const ft=filteredTasks();
+  const h = st.lang === 'ja' ? ['No','タスク名','工場','分類','担当者','開始日','終了日','進捗率(%)','優先度','サブタスク数','状態'] : 
+            st.lang === 'en' ? ['No','Task Name','Factory','Tags','Assignee','Start Date','End Date','Progress(%)','Priority','Subtasks','Status'] : 
+            ['No','Название','Завод','Теги','Исполнитель','Начало','Конец','Прогресс(%)','Приоритет','Подзадачи','Статус'];
+  const rows=ft.map((tk,i)=>[i+1,taskTitle(tk),tFac(tk.factory),taskTags(tk).join('/'),taskAssignee(tk),tk.start,tk.end,tk.progress,
+    plabel(tk.priority),tk.subtasks.length,tk.progress===100?t('st_done').replace('✅ ',''):isOD(tk)?t('gc_od'):t('s_act')]);
+  const ws=XLSX.utils.aoa_to_sheet([h,...rows]);
+  ws['!cols']=[{wch:4},{wch:30},{wch:10},{wch:10},{wch:16},{wch:12},{wch:12},{wch:8},{wch:10},{wch:10},{wch:12}];
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Tasks');
+  XLSX.writeFile(wb,`TaskData_${fd(new Date())}.xlsx`);closeModal();
+}
+
+// ═══════════════════════════════════════
+// AUTH（役割選択・パスワード認証）
+// ═══════════════════════════════════════
+const ADMIN_PASS = '1111';
+const AUTH_KEY = 'gohankojo-auth';
+const AUTH_SESSION_KEY = 'gohankojo-auth-session';
+
+// 認証状態（管理者はsessionStorageで更新後も保持）
+let authRole = null; // 'admin' | 'viewer' | null
+
+const AUTH_TEXT = {
+  ja: {
+    title:'合板/単板工場 タスク管理', sub:'ログインしてください',
+    admin:'管理者', admin_desc:'編集・追加・削除可能',
+    viewer:'閲覧者', viewer_desc:'閲覧のみ',
+    pw_label:'管理者パスワード', pw_ph:'パスワードを入力',
+    submit_admin:'管理者としてログイン', submit_viewer:'閲覧モードで開く',
+    err:'パスワードが違います', viewer_badge:'閲覧モード'
+  },
+  en: {
+    title:'Plywood/Veneer Task Manager', sub:'Please select your role',
+    admin:'Admin', admin_desc:'Edit, add, delete',
+    viewer:'Viewer', viewer_desc:'View only',
+    pw_label:'Admin Password', pw_ph:'Enter password',
+    submit_admin:'Login as Admin', submit_viewer:'Open as Viewer',
+    err:'Incorrect password', viewer_badge:'View Only'
+  },
+  ru: {
+    title:'Менеджер задач Фанера/Шпон', sub:'Выберите роль',
+    admin:'Администратор', admin_desc:'Редактировать, добавлять, удалять',
+    viewer:'Наблюдатель', viewer_desc:'Только просмотр',
+    pw_label:'Пароль администратора', pw_ph:'Введите пароль',
+    submit_admin:'Войти как администратор', submit_viewer:'Открыть как наблюдатель',
+    err:'Неверный пароль', viewer_badge:'Только просмотр'
+  }
+};
+
+let authLang = localStorage.getItem('gohankojo-lang') || 'ja';
+let authSelectedRole = null; // 'admin' | 'viewer'
+
+function at(k){ return (AUTH_TEXT[authLang]||AUTH_TEXT['ja'])[k]||k; }
+
+function renderAuth(){
+  const box = document.getElementById('auth-overlay');
+  if(!box) return;
+
+  const pw_area = authSelectedRole==='admin' ? `
+    <div class="auth-pw-area">
+      <div class="auth-pw-label">${at('pw_label')}</div>
+      <input class="auth-pw-input" id="auth-pw" type="password" placeholder="${at('pw_ph')}" maxlength="20"
+        onkeydown="if(event.key==='Enter')submitAuth()">
+      <div class="auth-pw-error" id="auth-err"></div>
+    </div>` : '';
+  const submitLabel = authSelectedRole==='admin' ? at('submit_admin')
+    : authSelectedRole==='viewer' ? at('submit_viewer') : at('submit_viewer');
+  const canSubmit = authSelectedRole !== null;
+
+  box.innerHTML = `
+    <div class="auth-box">
+      <div class="auth-logo">🏭</div>
+      <div class="auth-title">${at('title')}</div>
+      <div class="auth-sub">${at('sub')}</div>
+      <div class="auth-lang">
+        <button class="auth-lang-btn${authLang==='ja'?' on':''}" onclick="setAuthLang('ja')" style="font-size:20px;padding:4px 10px;">🇯🇵</button>
+        <button class="auth-lang-btn${authLang==='ru'?' on':''}" onclick="setAuthLang('ru')" style="font-size:20px;padding:4px 10px;">🇷🇺</button>
+      </div>
+      <div class="auth-role-btns">
+        <button class="auth-role-btn${authSelectedRole==='admin'?' selected':''}" onclick="selectRole('admin')">
+          <div class="auth-role-icon">🔐</div>
+          <div class="auth-role-label">${at('admin')}</div>
+          <div class="auth-role-desc">${at('admin_desc')}</div>
+        </button>
+        <button class="auth-role-btn${authSelectedRole==='viewer'?' selected':''}" onclick="selectRole('viewer')">
+          <div class="auth-role-icon">👁️</div>
+          <div class="auth-role-label">${at('viewer')}</div>
+          <div class="auth-role-desc">${at('viewer_desc')}</div>
+        </button>
+      </div>
+      ${pw_area}
+      ${canSubmit?`<button class="auth-submit" onclick="submitAuth()">${submitLabel}</button>`:''}
+    </div>`;
+  if(authSelectedRole==='admin') setTimeout(()=>document.getElementById('auth-pw')?.focus(),50);
+}
+
+function setAuthLang(lang){
+  authLang = lang;
+  st.lang = lang;
+  localStorage.setItem('gohankojo-lang', lang);
+  renderAuth();
+}
+
+function selectRole(role){
+  authSelectedRole = role;
+  renderAuth();
+}
+
+function submitAuth(){
+  if(authSelectedRole === 'viewer'){
+    loginAs('viewer');
+    return;
+  }
+  if(authSelectedRole === 'admin'){
+    const pw = document.getElementById('auth-pw')?.value || '';
+    if(pw === ADMIN_PASS){
+      loginAs('admin');
+    } else {
+      const err = document.getElementById('auth-err');
+      if(err){ err.textContent = at('err'); err.style.animation='none'; requestAnimationFrame(()=>err.style.animation=''); }
+      document.getElementById('auth-pw').value = '';
+      document.getElementById('auth-pw').focus();
+    }
+  }
+}
+
+function loginAs(role){
+  authRole = role;
+  // 管理者はsessionStorageに保存（タブを閉じるまで有効）
+  if(role === 'admin'){
+    sessionStorage.setItem(AUTH_SESSION_KEY, 'admin');
+  } else {
+    sessionStorage.removeItem(AUTH_SESSION_KEY);
+  }
+  const overlay = document.getElementById('auth-overlay');
+  if(overlay){ overlay.style.opacity='0'; overlay.style.transition='opacity .4s'; setTimeout(()=>overlay.remove(),400); }
+  if(role === 'viewer'){
+    document.body.classList.add('viewer-mode');
+  }
+  // ヘッダーにバッジ表示
+  setTimeout(()=>{
+    const logo = document.querySelector('.logo');
+    if(logo && role==='viewer'){
+      const badge = document.createElement('span');
+      badge.className='viewer-badge';
+      badge.textContent = at('viewer_badge');
+      logo.appendChild(badge);
+    }
+  }, 500);
+  // アプリ初期化
+  st.lang = authLang;
+  render();
+}
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+// sessionStorageに管理者セッションがあればログイン画面をスキップ
+
+(function initAuth(){
+  // ダークモードをページ読み込み時に即座に適用（チラつき防止）
+  applyDarkMode();
+
+  const savedSession = sessionStorage.getItem(AUTH_SESSION_KEY);
+  if(savedSession === 'admin'){
+    // 管理者として即座に復元
+    authRole = 'admin';
+    authLang = localStorage.getItem('gohankojo-lang') || 'ja';
+    st.lang = authLang;
+    render();
+    return;
+  }
+  // 通常の認証画面表示
+  const overlay = document.createElement('div');
+  overlay.id = 'auth-overlay';
+  overlay.className = 'auth-overlay';
+  document.body.appendChild(overlay);
+  renderAuth();
+})();
+</script>
+</body>
+</html>
