@@ -777,6 +777,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const fbDb = firebase.database();
 let fbReady = false; // Firebase接続済みフラグ
+let _lastSavedJson = null; // 自分が保存したデータのJSON（リスナー重複レンダリング防止）
 
 const COLORS = ['#3B82F6','#8B5CF6','#06B6D4','#10B981','#F59E0B','#EF4444','#EC4899','#14B8A6'];
 const CAT_COLOR = {
@@ -1218,8 +1219,10 @@ function nextId(){return tasks.length?Math.max(...tasks.map(t=>t.id))+1:1;}
 function taskColor(tags,idx){const m=(tags[0]||'').trim();return CAT_COLOR[m]||COLORS[idx%COLORS.length];}
 function save(){
   try{localStorage.setItem(LS_KEY,JSON.stringify(tasks));}catch(e){}
-  // Firebaseにも保存（全デバイスにリアルタイム反映）
-  if(fbReady) fbDb.ref('tasks').set(tasks);
+  // 自分が保存したデータを記録（リスナーの重複レンダリング防止）
+  _lastSavedJson = JSON.stringify(tasks);
+  // Firebaseに保存（fbReadyでなくてもSDKがキューイング）
+  try{ fbDb.ref('tasks').set(tasks); }catch(e){}
 }
 
 // 文字列類似度（バイグラムJaccard係数）
@@ -2877,7 +2880,7 @@ function saveTask(){
       color:taskColor(tags,tasks.length), exp:false, subtasks:f.subtasks
     });
   }
-  save();st.modal=false;render();
+  st.modal=false;save();render();
 }
 
 function _confirmDlg(msg,okLabel,onOk){
@@ -3261,18 +3264,18 @@ function loginAs(role){
 fbDb.ref('tasks').on('value', (snapshot) => {
   const data = snapshot.val();
   if(data !== null && Array.isArray(data)){
-    // 他デバイスからの変更かどうか判定（データが変わった時だけ再レンダリング）
-    const newJson = JSON.stringify(data);
-    const curJson = JSON.stringify(tasks);
-    const changed = newJson !== curJson;
+    const incomingJson = JSON.stringify(data);
+    // 自分が保存したデータがエコーバックしてきた場合は再レンダリングしない
+    if(incomingJson === _lastSavedJson){ fbReady = true; return; }
+    // 他デバイスからの変更 → tasks更新して再レンダリング
     tasks = data;
     try{localStorage.setItem(LS_KEY, JSON.stringify(tasks));}catch(e){}
     fbReady = true;
-    // 自分の保存では再レンダリングしない（モーダルが閉じてしまうのを防ぐ）
-    if(authRole && changed) render();
+    if(authRole) render();
   } else {
     // Firebase初回（データなし）→ ローカルデータをアップロード
     fbReady = true;
+    _lastSavedJson = JSON.stringify(tasks);
     fbDb.ref('tasks').set(tasks);
   }
 });
