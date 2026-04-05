@@ -2896,7 +2896,7 @@ function _confirmDlg(msg,okLabel,onOk){
   document.getElementById('_cd_cancel').onclick=close;
   el.addEventListener('click',e=>{if(e.target===el)close();});
 }
-function deleteTask(id){_confirmDlg(t('al_del'),t('btn_del'),()=>{tasks=tasks.filter(tx=>tx.id!==id);save();st.modal=false;render();});}
+function deleteTask(id){_confirmDlg(t('al_del'),t('btn_del'),()=>{tasks=tasks.filter(tx=>tx.id!==id);st.modal=false;save();render();});}
 
 // 一括操作
 function toggleBulkMode(){st.bulkMode=!st.bulkMode;if(!st.bulkMode)st.selectedIds=[];render();}
@@ -3261,11 +3261,15 @@ function loginAs(role){
 fbDb.ref('tasks').on('value', (snapshot) => {
   const data = snapshot.val();
   if(data !== null && Array.isArray(data)){
-    // Firebaseにデータあり → 全デバイスで同期
+    // 他デバイスからの変更かどうか判定（データが変わった時だけ再レンダリング）
+    const newJson = JSON.stringify(data);
+    const curJson = JSON.stringify(tasks);
+    const changed = newJson !== curJson;
     tasks = data;
     try{localStorage.setItem(LS_KEY, JSON.stringify(tasks));}catch(e){}
     fbReady = true;
-    if(authRole) render();
+    // 自分の保存では再レンダリングしない（モーダルが閉じてしまうのを防ぐ）
+    if(authRole && changed) render();
   } else {
     // Firebase初回（データなし）→ ローカルデータをアップロード
     fbReady = true;
