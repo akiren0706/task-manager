@@ -3262,20 +3262,18 @@ function loginAs(role){
 // FIREBASE リアルタイム同期
 // ═══════════════════════════════════════
 fbDb.ref('tasks').on('value', (snapshot) => {
-  const data = snapshot.val();
-  if(data !== null && Array.isArray(data)){
-    const incomingJson = JSON.stringify(data);
-    // 自分が保存したデータがエコーバックしてきた場合は再レンダリングしない
-    if(incomingJson === _lastSavedJson){ fbReady = true; return; }
-    // 他デバイスからの変更 → tasks更新して再レンダリング
-    tasks = data;
+  fbReady = true;
+  const raw = snapshot.val();
+  if(raw !== null){
+    // FirebaseはJSの配列をオブジェクトで返す場合があるので両方に対応
+    const arr = Array.isArray(raw) ? raw : Object.values(raw);
+    if(arr.length === 0) return;
+    tasks = arr.filter(Boolean); // nullエントリを除去
     try{localStorage.setItem(LS_KEY, JSON.stringify(tasks));}catch(e){}
-    fbReady = true;
-    if(authRole) render();
+    // モーダルが開いている間はrender()しない（入力中の内容が消えるのを防ぐ）
+    if(authRole && !st.modal) render();
   } else {
     // Firebase初回（データなし）→ ローカルデータをアップロード
-    fbReady = true;
-    _lastSavedJson = JSON.stringify(tasks);
     fbDb.ref('tasks').set(tasks);
   }
 });
