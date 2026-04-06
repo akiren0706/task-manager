@@ -1847,7 +1847,7 @@ function allAssignees(){
   return [...s].sort();
 }
 // allTagsはja内部キーを返す（サイドバー表示は別途翻訳）
-function allTags(){const s=new Set();tasks.forEach(t=>t.tags.forEach(g=>s.add(g)));return[...s];}
+function allTags(){const s=new Set();tasks.forEach(t=>(t.tags||[]).forEach(g=>s.add(g)));return[...s];}
 // tagsの表示名（現在言語）を返す
 function tagLabel(jaTag){
   const ruMap={'品質':'Качество','生産':'Производство','設備':'Оборудование','管理':'Управление','改善':'Улучшение','購入':'Закупка','工程':'Процесс','安全':'Безопасность','組織':'Организация','技術':'Технология'};
@@ -3303,7 +3303,15 @@ fbDb.ref('tasks').on('value', (snapshot) => {
   }
   if(!incoming.length) return;
 
-  tasks = incoming;
+  // nullになりうる配列フィールドを補正
+  tasks = incoming.map(t => ({
+    ...t,
+    tags: Array.isArray(t.tags) ? t.tags : [],
+    tags_ru: Array.isArray(t.tags_ru) ? t.tags_ru : [],
+    subtasks: Array.isArray(t.subtasks) ? t.subtasks.filter(Boolean).map(s=>({...s, title:s.title||'', progress:s.progress||0})) : [],
+    assignee: t.assignee || '',
+    color: t.color || '#3B82F6',
+  }));
   try{ localStorage.setItem(LS_KEY, JSON.stringify(tasks)); }catch(e){}
 
   // モーダルが閉じている場合のみ再レンダリング
