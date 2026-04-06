@@ -1217,9 +1217,10 @@ function pclass(p){return p==='urgent'?'pu':p==='high'?'ph':p==='medium'?'pm':'p
 function isOD(t_obj){const today=new Date();today.setHours(0,0,0,0);return pd(t_obj.end)<today&&t_obj.progress<100;}
 function nextId(){return tasks.length?Math.max(...tasks.map(t=>t.id))+1:1;}
 function taskColor(tags,idx){const m=(tags[0]||'').trim();return CAT_COLOR[m]||COLORS[idx%COLORS.length];}
-// undefinedを除去してFirebaseに送れる形に変換
+// undefinedキーを除去してFirebaseに送れる形に変換
+// JSON.stringifyはオブジェクト内のundefinedキーを自動削除する
 function _cleanForFirebase(obj){
-  return JSON.parse(JSON.stringify(obj, (k, v) => v === undefined ? null : v));
+  return JSON.parse(JSON.stringify(obj));
 }
 function save(){
   try{localStorage.setItem(LS_KEY,JSON.stringify(tasks));}catch(e){}
@@ -1867,13 +1868,14 @@ function getStats(){
 // RENDER
 // ═══════════════════════════════════════
 function render(){
+  try{
   const gc = document.getElementById('gc');
   if(gc) { scrollState.gcTop = gc.scrollTop; scrollState.gcLeft = gc.scrollLeft; }
   const lv = document.querySelector('.lv');
   if(lv) scrollState.lvTop = lv.scrollTop;
   const sbar = document.querySelector('.sbar');
   if(sbar) scrollState.sbarTop = sbar.scrollTop;
-  const modal = document.querySelector('.mbody'); 
+  const modal = document.querySelector('.mbody');
   if(modal) scrollState.modalTop = modal.scrollTop;
 
   document.getElementById('app').innerHTML=buildApp();
@@ -1889,6 +1891,7 @@ function render(){
   if(newSbar) newSbar.scrollTop = scrollState.sbarTop;
   const newModal = document.querySelector('.mbody');
   if(newModal) newModal.scrollTop = scrollState.modalTop;
+  }catch(e){ console.error('render error:', e); }
 }
 
 function bindEvents(){
