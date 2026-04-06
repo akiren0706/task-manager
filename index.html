@@ -1219,10 +1219,17 @@ function nextId(){return tasks.length?Math.max(...tasks.map(t=>t.id))+1:1;}
 function taskColor(tags,idx){const m=(tags[0]||'').trim();return CAT_COLOR[m]||COLORS[idx%COLORS.length];}
 function save(){
   try{localStorage.setItem(LS_KEY,JSON.stringify(tasks));}catch(e){}
-  // 自分が保存したデータを記録（リスナーの重複レンダリング防止）
-  _lastSavedJson = JSON.stringify(tasks);
-  // Firebaseに保存（fbReadyでなくてもSDKがキューイング）
-  try{ fbDb.ref('tasks').set(tasks); }catch(e){}
+  // Firebaseに保存（エラーはコンソールに表示）
+  fbDb.ref('tasks').set(tasks)
+    .then(()=>{ _updateSyncStatus('ok'); })
+    .catch(err=>{ console.error('Firebase save error:', err); _updateSyncStatus('err'); });
+}
+function _updateSyncStatus(state){
+  const el = document.getElementById('fb-sync-status');
+  if(!el) return;
+  if(state==='ok') el.textContent='🟢';
+  else if(state==='err') el.textContent='🔴';
+  else if(state==='connecting') el.textContent='🟡';
 }
 
 // 文字列類似度（バイグラムJaccard係数）
@@ -1931,7 +1938,7 @@ function buildApp(){
       ${authRole==='admin'?`<button class="vtab${st.view==='trans'?' on':''}" onclick="setView('trans')">${t('t_trans')}</button>`:''}
     </div>
     <div class="hdr-right">
-
+      <span id="fb-sync-status" title="Firebase同期状態" style="font-size:18px;cursor:default;">🟡</span>
       <div class="hdr-lang" style="display:flex;gap:3px;background:var(--border);border-radius:8px;padding:3px;">
         <button onclick="setLang('ja')" title="日本語"
           style="font-size:11px;font-weight:800;padding:4px 9px;border:none;border-radius:5px;cursor:pointer;transition:all .2s;
@@ -3259,23 +3266,44 @@ function loginAs(role){
 })();
 
 // ═══════════════════════════════════════
+// FIREBASE 接続状態監視
+// ═══════════════════════════════════════
+fbDb.ref('.info/connected').on('value', snap => {
+  _updateSyncStatus(snap.val() ? 'ok' : 'connecting');
+});
+
+// ═══════════════════════════════════════
 // FIREBASE リアルタイム同期
 // ═══════════════════════════════════════
 fbDb.ref('tasks').on('value', (snapshot) => {
   fbReady = true;
   const raw = snapshot.val();
-  if(raw !== null){
-    // FirebaseはJSの配列をオブジェクトで返す場合があるので両方に対応
-    const arr = Array.isArray(raw) ? raw : Object.values(raw);
-    if(arr.length === 0) return;
-    tasks = arr.filter(Boolean); // nullエントリを除去
-    try{localStorage.setItem(LS_KEY, JSON.stringify(tasks));}catch(e){}
-    // モーダルが開いている間はrender()しない（入力中の内容が消えるのを防ぐ）
-    if(authRole && !st.modal) render();
-  } else {
-    // Firebase初回（データなし）→ ローカルデータをアップロード
-    fbDb.ref('tasks').set(tasks);
+
+  if(raw === null){
+    // Firebaseにデータなし → ローカルデータをアップロード
+    fbDb.ref('tasks').set(tasks)
+      .catch(err => console.error('Firebase init upload error:', err));
+    return;
   }
+
+  // 配列・オブジェクト両方に対応してtasksを復元
+  let incoming;
+  if(Array.isArray(raw)){
+    incoming = raw.filter(t => t && t.id);
+  } else {
+    incoming = Object.values(raw).filter(t => t && t.id);
+  }
+  if(!incoming.length) return;
+
+  tasks = incoming;
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(tasks)); }catch(e){}
+
+  // モーダルが閉じている場合のみ再レンダリング
+  if(authRole && !st.modal) render();
+
+}, err => {
+  console.error('Firebase listener error:', err);
+  _updateSyncStatus('err');
 });
 </script>
 </body>
