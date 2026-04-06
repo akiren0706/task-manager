@@ -1217,10 +1217,15 @@ function pclass(p){return p==='urgent'?'pu':p==='high'?'ph':p==='medium'?'pm':'p
 function isOD(t_obj){const today=new Date();today.setHours(0,0,0,0);return pd(t_obj.end)<today&&t_obj.progress<100;}
 function nextId(){return tasks.length?Math.max(...tasks.map(t=>t.id))+1:1;}
 function taskColor(tags,idx){const m=(tags[0]||'').trim();return CAT_COLOR[m]||COLORS[idx%COLORS.length];}
+// undefinedを除去してFirebaseに送れる形に変換
+function _cleanForFirebase(obj){
+  return JSON.parse(JSON.stringify(obj, (k, v) => v === undefined ? null : v));
+}
 function save(){
   try{localStorage.setItem(LS_KEY,JSON.stringify(tasks));}catch(e){}
-  // Firebaseに保存（エラーはコンソールに表示）
-  fbDb.ref('tasks').set(tasks)
+  // undefinedを除去してからFirebaseに保存
+  const cleaned = _cleanForFirebase(tasks);
+  fbDb.ref('tasks').set(cleaned)
     .then(()=>{ _updateSyncStatus('ok'); })
     .catch(err=>{ console.error('Firebase save error:', err); _updateSyncStatus('err'); });
 }
@@ -3281,7 +3286,7 @@ fbDb.ref('tasks').on('value', (snapshot) => {
 
   if(raw === null){
     // Firebaseにデータなし → ローカルデータをアップロード
-    fbDb.ref('tasks').set(tasks)
+    fbDb.ref('tasks').set(_cleanForFirebase(tasks))
       .catch(err => console.error('Firebase init upload error:', err));
     return;
   }
